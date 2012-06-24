@@ -1,0 +1,76 @@
+#!/bin/bash
+
+echo "YunoHost Installation"
+echo "Do you want install Yunhost? (Y/n)"
+
+read rep
+
+if [ $rep = "Y" ] || [ $rep = "y" ];
+then 
+	echo "======== Update hostname ========"	
+	# Update hostname
+	echo "yunohost" > /etc/hostname
+	grep "yunohost.$(hostname -d)" /etc/hosts
+	if [ $? = 1 ];
+        then
+		echo -e "127.0.0.1\tyunohost.$(hostname -d)\tyunohost" > /etc/hosts	
+		/etc/init.d/hostname.sh start
+	fi
+
+	echo "======== Add repository ========"
+	#Get gpg key
+	wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 | apt-key add -
+	wget -O- http://repo.yunohost.org/yunohost.asc  | apt-key add -
+	grep "lemonldap-ng.org" /etc/apt/sources.list
+	if [ $? = 1 ];
+	then
+		echo "deb http://lemonldap-ng.org/deb squeeze main" >> /etc/apt/sources.list
+	fi
+	grep "yunohost" /etc/apt/sources.list
+	if [ $? = 1 ];
+        then
+		if [ $(lsb_release -cs) = "Debian" ];
+		then
+			echo "deb http://repo.yunohost.org/ squeeze main" >> /etc/apt/sources.list
+		elif [ $(lsb_release -cs) = "Ubuntu" ];
+		then
+			echo "deb http://repo.yunohost.org/ precise main" >> /etc/apt/sources.list
+		fi
+	fi
+	
+	#Update repo	
+	apt-get update
+	if [ $? != 0 ] ; 
+	then
+        	echo "Update Repo Failure"
+        	exit 1
+	fi
+	
+	echo "======== Install ========"
+	#add answer in debconf db
+	wget https://raw.github.com/YunoHost/build/master/debconf
+	debconf-set-selections debconf
+ 
+	#Install yunohost packages
+	apt-get install yunohost yunohost-config yunohost-config-postfix postfix postfix-ldap postfix-policyd-spf-perl
+	if [ $? != 0 ] ; 
+	then
+        	echo "Install yunohost Failure"
+        	exit 1
+	else
+		service slapd restart
+		service apache2 restart
+		service dovecot restart
+		service postfix restart
+		service ejabberd restart
+		service iptables start
+		service nscd restart
+		service nslcd restart
+		echo "======== Installation succes ========"
+		  
+	fi
+	
+else 
+	echo "======== Installation cancel ========"
+	exit 1
+fi

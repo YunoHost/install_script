@@ -1,0 +1,14 @@
+postfix postfix/main_mailer_type        select  Internet Site
+postfix postfix/mailname string /etc/mailname
+mysql-server-5.1 mysql-server/root_password password
+mysql-server-5.1 mysql-server/root_password_again password
+samba-common samba-common/workgroup string WORKGROUP
+samba-common samba-common/workgroup boolean true
+nslcd   nslcd/ldap-bindpw       password
+nslcd   nslcd/ldap-starttls     boolean false
+nslcd   nslcd/ldap-reqcert      select
+nslcd   nslcd/ldap-uris string  ldap://localhost/
+nslcd   nslcd/ldap-binddn       string
+nslcd   nslcd/ldap-base         string dc=yunohost,dc=org
+proftpd-basic   shared/proftpd/inetd_or_standalone      select standalone
+libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
