@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 echo "YunoHost Installation"
 echo "Do you want install Yunhost? (Y/n)"
@@ -29,10 +29,10 @@ then
 	grep "yunohost" /etc/apt/sources.list
 	if [ $? = 1 ];
         then
-		if [ $(lsb_release -cs) = "Debian" ];
+		if [ $(lsb_release -is) = "Debian" ];
 		then
 			echo "deb http://repo.yunohost.org/ squeeze main" >> /etc/apt/sources.list
-		elif [ $(lsb_release -cs) = "Ubuntu" ];
+		elif [ $(lsb_release -is) = "Ubuntu" ];
 		then
 			echo "deb http://repo.yunohost.org/ precise main" >> /etc/apt/sources.list
 		fi
@@ -48,11 +48,11 @@ then
 	
 	echo "======== Install ========"
 	#add answer in debconf db
-	wget https://raw.github.com/YunoHost/Script/master/debconf --no-check-certificate
+	#wget https://raw.github.com/YunoHost/Script/master/debconf --no-check-certificate
 	debconf-set-selections debconf
  
 	#Install yunohost packages
-	apt-get install yunohost yunohost-config yunohost-config-postfix postfix postfix-ldap postfix-policyd-spf-perl
+	apt-get install yunohost yunohost-config yunohost-config-postfix postfix postfix-ldap postfix-policyd-spf-perl -y
 	if [ $? != 0 ] ; 
 	then
         	echo "Install yunohost Failure"
