@@ -48,7 +48,7 @@ then
 	
 	echo "======== Install ========"
 	#add answer in debconf db
-	wget https://github.com/YunoHost/Script/raw/master/debconf
+	wget https://raw.github.com/YunoHost/Script/master/debconf --no-check-certificate
 	debconf-set-selections debconf
  
 	#Install yunohost packages
