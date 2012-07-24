@@ -12,3 +12,5 @@ nslcd	nslcd/ldap-binddn	string
 nslcd	nslcd/ldap-base	string	dc=yunohost,dc=org
 proftpd-basic   shared/proftpd/inetd_or_standalone      select standalone
 libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
+mysql-server-5.1 mysql-server/root_password password seen false
+mysql-server-5.1 mysql-server/root_password_again password seen false

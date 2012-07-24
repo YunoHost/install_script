@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash 
 
 echo "YunoHost Installation"
 echo "Do you want install Yunhost? (Y/n)"
@@ -48,7 +48,6 @@ then
 	
 	echo "======== Install ========"
 	#add answer in debconf db
-	#wget https://raw.github.com/YunoHost/Script/master/debconf --no-check-certificate
 	debconf-set-selections debconf
  
 	#Install yunohost packages
