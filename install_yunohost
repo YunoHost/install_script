@@ -35,7 +35,6 @@ then
 	wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
 	wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
 	grep -q "lemonldap-ng.org" /etc/apt/sources.list
-	exit 0
 	if [ $? = 1 ];
 	then
 		echo "deb http://lemonldap-ng.org/deb squeeze main" >> /etc/apt/sources.list
