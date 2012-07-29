@@ -10,14 +10,39 @@ then
 	apt-get install lsb-release -y 
 fi
 
+if [ ! -f /etc/yunohost/yunohost.conf ];
+then
+mkdir /etc/yunohost/
+cat << EOF > /etc/yunohost/yunohost.conf
+#Yunohost custom config
+#for enable yunohost custom config change no by yes
+
+amavis=no
+apache2=no
+dovecot=no
+ejabberd=no
+iptables=no
+lemonldap-ng=no
+postfix=no
+proftpd=no
+radicale=no
+samba=no
+slapd=no
+ssh=yes
+EOF
+fi
+
 echo "======== Check domain ========"
 whiptail --title "Yunohost Domain" --yesno "Your domain is $DOMAIN\nDo you want to change this?" 8 78
-if [ $? = 0 ];
+if [ $? = 255 ];
 then
+	exit 1
+elif [ $? = 1 ];
+then 
 	DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3)
 fi
 
-whiptail --title "Yunohost Installation" --yesno "Do you want install Yunhost?" 8 78
+whiptail --title "Yunohost Installation" --yesno "Caution : your config file for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwirte/nDo you want continue install Yunhost?" 8 78
 if [ $? = 0 ];
 then 
 	echo "======== Update hostname ========"	
