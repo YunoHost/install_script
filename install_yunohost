@@ -95,7 +95,6 @@ then
         	echo "Install yunohost Failure"
         	exit 1
 	else
-		mysqladmin -u root -pyunohost password ''
 		service slapd restart 
 		service apache2 restart
 		service dovecot restart
