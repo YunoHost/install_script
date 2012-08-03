@@ -34,12 +34,18 @@ fi
 
 echo "======== Check domain ========"
 whiptail --title "Yunohost Domain" --yesno "Your domain is $DOMAIN\nDo you want to change this?" 8 78
-if [ $? = 255 ];
+YESNO=$?
+if [ $YESNO = 255 ];
 then
-	exit 1
-elif [ $? = 1 ];
-then 
-	DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3)
+        exit 1
+elif [ $YESNO = 0 ];
+then
+        DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3)
+fi
+
+if [ $DOMAIN = '' ];
+then
+	DOMAIN=$(hostname -d)
 fi
 
 whiptail --title "Yunohost Installation" --yesno "Caution : your config file for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwirte/nDo you want continue install Yunhost?" 8 78
