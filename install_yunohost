@@ -70,9 +70,11 @@ then
 		if [ $(lsb_release -is) = "Debian" ];
 		then
 			echo "deb http://repo.yunohost.org/ squeeze main" >> /etc/apt/sources.list
+			echo "deb http://repo.yunohost.org/ apps main" >> /etc/apt/sources.list
 		elif [ $(lsb_release -is) = "Ubuntu" ];
 		then
 			echo "deb http://repo.yunohost.org/ precise main" >> /etc/apt/sources.list
+			echo "deb http://repo.yunohost.org/ apps main" >> /etc/apt/sources.list
 		fi
 	fi
 	
