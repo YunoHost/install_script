@@ -48,7 +48,7 @@ then
 	DOMAIN=$(hostname -d)
 fi
 
-whiptail --title "Yunohost Installation" --yesno "Caution : your config file for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwirte/nDo you want continue install Yunhost?" 8 78
+whiptail --title "Yunohost Installation" --yesno "Caution : your config file for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwirte\nDo you want continue install Yunhost?" 8 78
 if [ $? = 0 ];
 then 
 	echo "======== Update hostname ========"	
