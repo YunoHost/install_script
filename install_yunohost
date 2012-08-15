@@ -15,7 +15,7 @@ then
 mkdir /etc/yunohost/
 cat << EOF > /etc/yunohost/yunohost.conf
 #Yunohost custom config
-#for enable yunohost custom config change no by yes
+#to enable yunohost custom config change no by yes
 
 amavis=no
 apache2=no
@@ -48,10 +48,10 @@ then
 	DOMAIN=$(hostname -d)
 fi
 
-whiptail --title "Yunohost Installation" --yesno "Caution : your config file for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwirte\nDo you want continue install Yunhost?" 8 78
+whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
 if [ $? = 0 ];
 then 
-	echo "======== Update hostname ========"	
+	echo "======== Update hostname ========"
 	# Update hostname
 	echo "yunohost" > /etc/hostname
 	grep -q "yunohost.$DOMAIN" /etc/hosts
@@ -111,11 +111,11 @@ then
 		service iptables start
 		service nscd restart
 		service nslcd restart
-		echo "======== Installation succes ========"
+		echo "======== Installation success ========"
 		  
 	fi
 	
 else 
-	echo "======== Installation cancel ========"
+	echo "======== Installation cancelled ========"
 	exit 1
 fi
