@@ -1,16 +1,21 @@
 #!/bin/bash 
 
+# TODO : test if the script is executed as root
+
 echo "======== YunoHost Installation ========"
 echo "======== Check dependences ========"
-DOMAIN=$(hostname -d)
+
+DOMAIN="$(hostname -d)"
+
 dpkg -l | grep -q lsb-release
-if [ $? = 1 ];
+# @abeudin : Using double brackets is more "secure" (kind of) => http://tldp.org/LDP/abs/html/testconstructs.html#DBLBRACKETS
+if [[ $? -eq 1 ]]
 then
 	apt-get update -qq
-	apt-get install lsb-release -y 
+	apt-get install lsb-release -y
 fi
 
-if [ ! -f /etc/yunohost/yunohost.conf ];
+if [[ ! -f /etc/yunohost/yunohost.conf ]]
 then
 mkdir /etc/yunohost/
 cat << EOF > /etc/yunohost/yunohost.conf
@@ -35,28 +40,28 @@ fi
 echo "======== Check domain ========"
 whiptail --title "Yunohost Domain" --yesno "Your domain is $DOMAIN\nDo you want to change this?" 8 78
 YESNO=$?
-if [ $YESNO = 255 ];
+if [[ $YESNO -eq 255 ]]
 then
-        exit 1
-elif [ $YESNO = 0 ];
+		exit 1
+elif [[ $YESNO -eq 0 ]]
 then
-        DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3)
+		DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3)
 fi
 
-if [ $DOMAIN = '' ];
+if [[ -z "$DOMAIN" ]]
 then
-	DOMAIN=$(hostname -d)
+	DOMAIN="$(hostname -d)"
 fi
 
 whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
-if [ $? = 0 ];
-then 
+if [ $? -eq 0 ]
+then
 	echo "======== Update hostname ========"
 	# Update hostname
 	echo "yunohost" > /etc/hostname
 	grep -q "yunohost.$DOMAIN" /etc/hosts
-	if [ $? = 1 ];
-        then
+	if [[ $? -eq 1 ]]
+		then
 		echo -e "127.0.0.1\tyunohost.$DOMAIN\tyunohost" > /etc/hosts	
 		/etc/init.d/hostname.sh start
 	fi
@@ -65,19 +70,22 @@ then
 	#Get gpg key
 	wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
 	wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
+
+	# TODO : use custom yunohost.sources.lits file and store it in sources.list.d
+
 	grep -q "lemonldap-ng.org" /etc/apt/sources.list
-	if [ $? = 1 ];
+	if [[ $? -eq 1 ]]
 	then
 		echo "deb http://lemonldap-ng.org/deb squeeze main" >> /etc/apt/sources.list
 	fi
 	grep "yunohost" /etc/apt/sources.list
-	if [ $? = 1 ];
-        then
-		if [ $(lsb_release -is) = "Debian" ];
+	if [[ $? -eq 1 ]]
+		then
+		if [[ "$(lsb_release -is)" = "Debian" ]]
 		then
 			echo "deb http://repo.yunohost.org/ squeeze main" >> /etc/apt/sources.list
 			echo "deb http://repo.yunohost.org/ apps main" >> /etc/apt/sources.list
-		elif [ $(lsb_release -is) = "Ubuntu" ];
+		elif [[ "$(lsb_release -is)" = "Ubuntu" ]]
 		then
 			echo "deb http://repo.yunohost.org/ precise main" >> /etc/apt/sources.list
 			echo "deb http://repo.yunohost.org/ apps main" >> /etc/apt/sources.list
@@ -86,24 +94,36 @@ then
 	
 	#Update repo	
 	apt-get update -qq
-	if [ $? != 0 ] ; 
+	if [[ $? -ne 0 ]]
 	then
-        	echo "Update Repo Failure"
-        	exit 1
+			# TODO : rollback (restore legacy configuration for hostname, sources.list, ...)
+			echo "Update Repo Failure"
+			exit 1
 	fi
 	
 	echo "======== Install ========"
 	#add answer in debconf db
 	debconf-set-selections debconf
- 
+
 	#Install yunohost packages
-	debconf-apt-progress --logfile /var/log/yunohost.log --logstderr /var/log/yunohost.error -- apt-get -y install yunohost yunohost-config yunohost-config-postfix postfix postfix-ldap postfix-policyd-spf-perl
-	if [ $? != 0 ] ; 
+	debconf-apt-progress \
+		--logfile /var/log/yunohost.log \
+		--logstderr /var/log/yunohost.error \
+		-- \
+		apt-get -y install \
+			yunohost \
+			yunohost-config \
+			yunohost-config-postfix \
+			postfix postfix-ldap \
+			postfix-policyd-spf-perl
+
+	if [[ $? -ne 0 ]]
 	then
-        	echo "Install yunohost Failure"
-        	exit 1
+			# TODO : warn the user that no rollback will be performed and list modified files
+			echo "======== Installation failed ========"
+			exit 1
 	else
-		service slapd restart 
+		service slapd restart
 		service apache2 restart
 		service dovecot restart
 		service postfix restart
@@ -112,10 +132,9 @@ then
 		service nscd restart
 		service nslcd restart
 		echo "======== Installation success ========"
-		  
 	fi
 	
-else 
+else
 	echo "======== Installation cancelled ========"
 	exit 1
 fi
