@@ -1,11 +1,22 @@
 #!/bin/bash 
 
+function bck {
+    FULLPATH="$(readlink -f "$1")"
+    DST="${2%/}/$(dirname $FULLPATH)"
+    mkdir -p "$DST"
+    cp -r --preserve=all "$FULLPATH" "$DST/$(basename $FULLPATH)"
+}
+
+function restore {
+    # TODO
+}
+
 # TODO : test if the script is executed as root
+
+set -u
 
 echo "======== YunoHost Installation ========"
 echo "======== Check dependences ========"
-
-DOMAIN="$(hostname -d)"
 
 dpkg -l | grep -q lsb-release
 # @abeudin : Using double brackets is more "secure" (kind of) => http://tldp.org/LDP/abs/html/testconstructs.html#DBLBRACKETS
@@ -37,59 +48,64 @@ ssh=yes
 EOF
 fi
 
-echo "======== Check domain ========"
+echo "======== Checking domain ========"
 whiptail --title "Yunohost Domain" --yesno "Your domain is $DOMAIN\nDo you want to change this?" 8 78
 YESNO=$?
-if [[ $YESNO -eq 255 ]]
-then
-		exit 1
-elif [[ $YESNO -eq 0 ]]
-then
-		DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3)
-fi
 
-if [[ -z "$DOMAIN" ]]
-then
-	DOMAIN="$(hostname -d)"
-fi
+case $YESNO in
+    0) DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3);; # <YES>
+    1) ;; # <NO> => Noting to do here. Just keeping it for the record
+    *) echo >&2 "ERROR: Unknown error ($YESNO) occured. Exiting"; exit $YESNO;; # ERROR
+esac
+
+[[ -z "$DOMAIN" ]] && DOMAIN="$(hostname -d)"
 
 whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
-if [ $? -eq 0 ]
+YESNO=$?
+
+if [ $YESNO -eq 0 ]
 then
-	echo "======== Update hostname ========"
+    # Backup folder for legacy config files
+    LEGACY=/etc/yunohost/.legacy
+    mkdir -p "$LEGACY"
+
+	echo "======== Updating hostname ========"
 	# Update hostname
+    bck /etc/hostname "$LEGACY"
 	echo "yunohost" > /etc/hostname
-	grep -q "yunohost.$DOMAIN" /etc/hosts
-	if [[ $? -eq 1 ]]
-		then
+    # Update hosts
+	if [[ $(grep -c "yunohost.$DOMAIN" /etc/hosts) -eq 0 ]]
+	then
+        bck /etc/hosts "$LEGACY"
 		echo -e "127.0.0.1\tyunohost.$DOMAIN\tyunohost" > /etc/hosts	
 		/etc/init.d/hostname.sh start
 	fi
 
-	echo "======== Add repository ========"
+	echo "======== Adding repositories ========"
 	#Get gpg key
 	wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
 	wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
 
-	# TODO : use custom yunohost.sources.lits file and store it in sources.list.d
-
-	grep -q "lemonldap-ng.org" /etc/apt/sources.list
+    CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
+	grep -qri "lemonldap-ng.org" /etc/apt/sources.list*
 	if [[ $? -eq 1 ]]
 	then
-		echo "deb http://lemonldap-ng.org/deb squeeze main" >> /etc/apt/sources.list
+		echo "deb http://lemonldap-ng.org/deb squeeze main" >> $CUSTOMAPT
 	fi
-	grep "yunohost" /etc/apt/sources.list
+
+	grep -qri "yunohost" /etc/apt/sources.list*
 	if [[ $? -eq 1 ]]
-		then
-		if [[ "$(lsb_release -is)" = "Debian" ]]
-		then
-			echo "deb http://repo.yunohost.org/ squeeze main" >> /etc/apt/sources.list
-			echo "deb http://repo.yunohost.org/ apps main" >> /etc/apt/sources.list
-		elif [[ "$(lsb_release -is)" = "Ubuntu" ]]
-		then
-			echo "deb http://repo.yunohost.org/ precise main" >> /etc/apt/sources.list
-			echo "deb http://repo.yunohost.org/ apps main" >> /etc/apt/sources.list
-		fi
+	then
+        case "$(lsb_release -is)" in
+            "Debian") 
+                echo "deb http://repo.yunohost.org/ squeeze main" >> $CUSTOMAPT
+                echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
+                ;;
+            "Ubuntu") 
+                echo "deb http://repo.yunohost.org/ precise main" >> $CUSTOMAPT
+                echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
+                ;;
+        esac
 	fi
 	
 	#Update repo	
