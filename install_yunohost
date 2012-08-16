@@ -7,8 +7,10 @@ function bck {
     cp -r --preserve=all "$FULLPATH" "$DST/$(basename $FULLPATH)"
 }
 
-function restore {
-    # TODO
+function rst {
+    [[ ! -d "$LEGACY" ]] && echo >&2 "Rollback failed : Unknown folder $LEGACY" && exit $ERR_FAIL_RESTORE
+    mv -fv "$LEGACY"/* /
+    [[ $? -ne 0 ]] && echo >&2 "Rollback failed" && exit $ERR_FAIL_RESTORE
 }
 
 # TODO : test if the script is executed as root
@@ -113,8 +115,9 @@ then
 	if [[ $? -ne 0 ]]
 	then
 			# TODO : rollback (restore legacy configuration for hostname, sources.list, ...)
-			echo "Update Repo Failure"
-			exit 1
+			echo "Update Repo Failure : Rolling back"
+            rst "$LEGACY"
+			exit $ERR_FAIL_UPDATE
 	fi
 	
 	echo "======== Install ========"
