@@ -97,7 +97,7 @@ then
 	debconf-set-selections debconf
  
 	#Install yunohost packages
-	debconf-apt-progress --logfile /var/log/yunohost.log --logstderr /var/log/yunohost.error -- apt-get -y install yunohost yunohost-config yunohost-config-postfix postfix postfix-ldap postfix-policyd-spf-perl
+	debconf-apt-progress --logstderr /var/log/yunohost.log -- apt-get -y install yunohost yunohost-config yunohost-config-postfix postfix postfix-ldap postfix-policyd-spf-perl
 	if [ $? != 0 ] ; 
 	then
         	echo "Install yunohost Failure"
