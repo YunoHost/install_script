@@ -63,7 +63,7 @@ esac
 whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
 YESNO=$?
 
-if [ $YESNO -eq 0 ]
+if [[ $YESNO -eq 0 ]]
 then
     # Backup folder for legacy config files
     LEGACY=/etc/yunohost/.legacy
