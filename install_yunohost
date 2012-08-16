@@ -1,5 +1,11 @@
 #!/bin/bash 
 
+SUCCESS=0
+ERR_FAIL_RESTORE=1
+ERR_FAIL_UPDATE=2
+ERR_FAIL_INSTALL=3
+ERR_CANCEL_INSTALL=4
+
 function bck {
     FULLPATH="$(readlink -f "$1")"
     DST="${2%/}/$(dirname $FULLPATH)"
@@ -114,7 +120,6 @@ then
 	apt-get update -qq
 	if [[ $? -ne 0 ]]
 	then
-			# TODO : rollback (restore legacy configuration for hostname, sources.list, ...)
 			echo "Update Repo Failure : Rolling back"
             rst "$LEGACY"
 			exit $ERR_FAIL_UPDATE
@@ -138,9 +143,11 @@ then
 
 	if [[ $? -ne 0 ]]
 	then
-			# TODO : warn the user that no rollback will be performed and list modified files
 			echo "======== Installation failed ========"
-			exit 1
+            echo "Rolling back have to be done manually !"
+            echo "Check your legacy configuration files => '$LEGACY'"
+            echo "Check install logs => '/var/log/yunohost.log' and '/var/log/yunohost.error'"
+			exit $ERR_FAIL_INSTALL
 	else
 		service slapd restart
 		service apache2 restart
