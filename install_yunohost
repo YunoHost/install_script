@@ -5,6 +5,7 @@ ERR_FAIL_RESTORE=1
 ERR_FAIL_UPDATE=2
 ERR_FAIL_INSTALL=3
 ERR_CANCEL_INSTALL=4
+ERR_IMPOSSIBLE=-1
 
 function bck {
     FULLPATH="$(readlink -f "$1")"
@@ -158,9 +159,13 @@ then
 		service nscd restart
 		service nslcd restart
 		echo "======== Installation success ========"
+        exit $SUCCESS
 	fi
 	
 else
 	echo "======== Installation cancelled ========"
-	exit 1
+	exit $ERR_CANCEL_INSTALL
 fi
+
+# Security : we shouldn't be able to exit here
+exit $ERR_IMPOSSIBLE
