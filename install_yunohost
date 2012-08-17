@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash  -x
 
 SUCCESS=0
 ERR_FAIL_RESTORE=1
@@ -20,15 +20,18 @@ function rst {
     [[ $? -ne 0 ]] && echo >&2 "Rollback failed" && exit $ERR_FAIL_RESTORE
 }
 
-# TODO : test if the script is executed as root
-
 set -u
+echo "======== Check rights ========"
+
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
 
 echo "======== YunoHost Installation ========"
 echo "======== Check dependences ========"
 
 dpkg -l | grep -q lsb-release
-# @abeudin : Using double brackets is more "secure" (kind of) => http://tldp.org/LDP/abs/html/testconstructs.html#DBLBRACKETS
 if [[ $? -eq 1 ]]
 then
 	apt-get update -qq
@@ -58,13 +61,20 @@ EOF
 fi
 
 echo "======== Checking domain ========"
+if [[ "${DOMAIN:-1}" = 1 ]]
+then 
+	echo "======== Installation failed ========"
+	echo "Configure your domain name please"
+	exit $ERR_IMPOSSIBLE
+fi
+
 whiptail --title "Yunohost Domain" --yesno "Your domain is $DOMAIN\nDo you want to change this?" 8 78
 YESNO=$?
 
 case $YESNO in
-    0) DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3);; # <YES>
-    1) ;; # <NO> => Noting to do here. Just keeping it for the record
-    *) echo >&2 "ERROR: Unknown error ($YESNO) occured. Exiting"; exit $YESNO;; # ERROR
+	0) DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3);; # <YES>
+	1) ;; # <NO> => Noting to do here. Just keeping it for the record
+	*) echo >&2 "ERROR: Unknown error ($YESNO) occured. Exiting"; exit $YESNO;; # ERROR
 esac
 
 [[ -z "$DOMAIN" ]] && DOMAIN="$(hostname -d)"
@@ -74,18 +84,18 @@ YESNO=$?
 
 if [[ $YESNO -eq 0 ]]
 then
-    # Backup folder for legacy config files
-    LEGACY=/etc/yunohost/.legacy
-    mkdir -p "$LEGACY"
+	# Backup folder for legacy config files
+	LEGACY=/etc/yunohost/.legacy
+	mkdir -p "$LEGACY"
 
 	echo "======== Updating hostname ========"
 	# Update hostname
-    bck /etc/hostname "$LEGACY"
+	bck /etc/hostname "$LEGACY"
 	echo "yunohost" > /etc/hostname
-    # Update hosts
+	# Update hosts
 	if [[ $(grep -c "yunohost.$DOMAIN" /etc/hosts) -eq 0 ]]
 	then
-        bck /etc/hosts "$LEGACY"
+        	bck /etc/hosts "$LEGACY"
 		echo -e "127.0.0.1\tyunohost.$DOMAIN\tyunohost" > /etc/hosts	
 		/etc/init.d/hostname.sh start
 	fi
@@ -95,14 +105,14 @@ then
 	wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
 	wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
 
-    CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
-	grep -qri "lemonldap-ng.org" /etc/apt/sources.list*
+	CUSTOMAPT=/etc/apt/sources.list
+	grep -qri "lemonldap-ng.org" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
 		echo "deb http://lemonldap-ng.org/deb squeeze main" >> $CUSTOMAPT
 	fi
 
-	grep -qri "yunohost" /etc/apt/sources.list*
+	grep -qri "yunohost" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
         case "$(lsb_release -is)" in
@@ -121,9 +131,9 @@ then
 	apt-get update -qq
 	if [[ $? -ne 0 ]]
 	then
-			echo "Update Repo Failure : Rolling back"
-            rst "$LEGACY"
-			exit $ERR_FAIL_UPDATE
+		echo "Update Repo Failure : Rolling back"
+		rst "$LEGACY"
+		exit $ERR_FAIL_UPDATE
 	fi
 	
 	echo "======== Install ========"
@@ -131,10 +141,6 @@ then
 	debconf-set-selections debconf
 
 	#Install yunohost packages
-<<<<<<< HEAD
-	debconf-apt-progress --logstderr /var/log/yunohost.log -- apt-get -y install yunohost yunohost-config yunohost-config-postfix postfix postfix-ldap postfix-policyd-spf-perl
-	if [ $? != 0 ] ; 
-=======
 	debconf-apt-progress \
 		--logfile /var/log/yunohost.log \
 		--logstderr /var/log/yunohost.error \
@@ -147,13 +153,12 @@ then
 			postfix-policyd-spf-perl
 
 	if [[ $? -ne 0 ]]
->>>>>>> 307fa4b0a8fd8391ae5be4caffd1252d9397b012
 	then
-			echo "======== Installation failed ========"
-            echo "Rolling back have to be done manually !"
-            echo "Check your legacy configuration files => '$LEGACY'"
-            echo "Check install logs => '/var/log/yunohost.log' and '/var/log/yunohost.error'"
-			exit $ERR_FAIL_INSTALL
+		echo "======== Installation failed ========"
+		echo "Rolling back have to be done manually !"
+		echo "Check your legacy configuration files => '$LEGACY'"
+		echo "Check install logs => '/var/log/yunohost.log' and '/var/log/yunohost.error'"
+		exit $ERR_FAIL_INSTALL
 	else
 		service slapd restart
 		service apache2 restart
@@ -164,7 +169,7 @@ then
 		service nscd restart
 		service nslcd restart
 		echo "======== Installation success ========"
-        exit $SUCCESS
+	        exit $SUCCESS
 	fi
 	
 else
