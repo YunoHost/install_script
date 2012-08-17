@@ -1,21 +1,46 @@
 #!/bin/bash 
 
+SUCCESS=0
+ERR_FAIL_RESTORE=1
+ERR_FAIL_UPDATE=2
+ERR_FAIL_INSTALL=3
+ERR_CANCEL_INSTALL=4
+ERR_IMPOSSIBLE=-1
+
+function bck {
+    FULLPATH="$(readlink -f "$1")"
+    DST="${2%/}/$(dirname $FULLPATH)"
+    mkdir -p "$DST"
+    cp -r --preserve=all "$FULLPATH" "$DST/$(basename $FULLPATH)"
+}
+
+function rst {
+    [[ ! -d "$LEGACY" ]] && echo >&2 "Rollback failed : Unknown folder $LEGACY" && exit $ERR_FAIL_RESTORE
+    mv -fv "$LEGACY"/* /
+    [[ $? -ne 0 ]] && echo >&2 "Rollback failed" && exit $ERR_FAIL_RESTORE
+}
+
+# TODO : test if the script is executed as root
+
+set -u
+
 echo "======== YunoHost Installation ========"
 echo "======== Check dependences ========"
-DOMAIN=$(hostname -d)
+
 dpkg -l | grep -q lsb-release
-if [ $? = 1 ];
+# @abeudin : Using double brackets is more "secure" (kind of) => http://tldp.org/LDP/abs/html/testconstructs.html#DBLBRACKETS
+if [[ $? -eq 1 ]]
 then
 	apt-get update -qq
-	apt-get install lsb-release -y 
+	apt-get install lsb-release -y
 fi
 
-if [ ! -f /etc/yunohost/yunohost.conf ];
+if [[ ! -f /etc/yunohost/yunohost.conf ]]
 then
 mkdir /etc/yunohost/
 cat << EOF > /etc/yunohost/yunohost.conf
 #Yunohost custom config
-#for enable yunohost custom config change no by yes
+#to enable yunohost custom config change no by yes
 
 amavis=no
 apache2=no
@@ -32,78 +57,105 @@ ssh=yes
 EOF
 fi
 
-echo "======== Check domain ========"
+echo "======== Checking domain ========"
 whiptail --title "Yunohost Domain" --yesno "Your domain is $DOMAIN\nDo you want to change this?" 8 78
 YESNO=$?
-if [ $YESNO = 255 ];
-then
-        exit 1
-elif [ $YESNO = 0 ];
-then
-        DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3)
-fi
 
-if [ $DOMAIN = '' ];
-then
-	DOMAIN=$(hostname -d)
-fi
+case $YESNO in
+    0) DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3);; # <YES>
+    1) ;; # <NO> => Noting to do here. Just keeping it for the record
+    *) echo >&2 "ERROR: Unknown error ($YESNO) occured. Exiting"; exit $YESNO;; # ERROR
+esac
 
-whiptail --title "Yunohost Installation" --yesno "Caution : your config file for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwirte\nDo you want continue install Yunhost?" 8 78
-if [ $? = 0 ];
-then 
-	echo "======== Update hostname ========"	
+[[ -z "$DOMAIN" ]] && DOMAIN="$(hostname -d)"
+
+whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,apache,ejabberd,radicale will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
+YESNO=$?
+
+if [[ $YESNO -eq 0 ]]
+then
+    # Backup folder for legacy config files
+    LEGACY=/etc/yunohost/.legacy
+    mkdir -p "$LEGACY"
+
+	echo "======== Updating hostname ========"
 	# Update hostname
+    bck /etc/hostname "$LEGACY"
 	echo "yunohost" > /etc/hostname
-	grep -q "yunohost.$DOMAIN" /etc/hosts
-	if [ $? = 1 ];
-        then
+    # Update hosts
+	if [[ $(grep -c "yunohost.$DOMAIN" /etc/hosts) -eq 0 ]]
+	then
+        bck /etc/hosts "$LEGACY"
 		echo -e "127.0.0.1\tyunohost.$DOMAIN\tyunohost" > /etc/hosts	
 		/etc/init.d/hostname.sh start
 	fi
 
-	echo "======== Add repository ========"
+	echo "======== Adding repositories ========"
 	#Get gpg key
 	wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
 	wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
-	grep -q "lemonldap-ng.org" /etc/apt/sources.list
-	if [ $? = 1 ];
+
+    CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
+	grep -qri "lemonldap-ng.org" /etc/apt/sources.list*
+	if [[ $? -eq 1 ]]
 	then
-		echo "deb http://lemonldap-ng.org/deb squeeze main" >> /etc/apt/sources.list
+		echo "deb http://lemonldap-ng.org/deb squeeze main" >> $CUSTOMAPT
 	fi
-	grep "yunohost" /etc/apt/sources.list
-	if [ $? = 1 ];
-        then
-		if [ $(lsb_release -is) = "Debian" ];
-		then
-			echo "deb http://repo.yunohost.org/ squeeze main" >> /etc/apt/sources.list
-			echo "deb http://repo.yunohost.org/ apps main" >> /etc/apt/sources.list
-		elif [ $(lsb_release -is) = "Ubuntu" ];
-		then
-			echo "deb http://repo.yunohost.org/ precise main" >> /etc/apt/sources.list
-			echo "deb http://repo.yunohost.org/ apps main" >> /etc/apt/sources.list
-		fi
+
+	grep -qri "yunohost" /etc/apt/sources.list*
+	if [[ $? -eq 1 ]]
+	then
+        case "$(lsb_release -is)" in
+            "Debian") 
+                echo "deb http://repo.yunohost.org/ squeeze main" >> $CUSTOMAPT
+                echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
+                ;;
+            "Ubuntu") 
+                echo "deb http://repo.yunohost.org/ precise main" >> $CUSTOMAPT
+                echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
+                ;;
+        esac
 	fi
 	
 	#Update repo	
 	apt-get update -qq
-	if [ $? != 0 ] ; 
+	if [[ $? -ne 0 ]]
 	then
-        	echo "Update Repo Failure"
-        	exit 1
+			echo "Update Repo Failure : Rolling back"
+            rst "$LEGACY"
+			exit $ERR_FAIL_UPDATE
 	fi
 	
 	echo "======== Install ========"
 	#add answer in debconf db
 	debconf-set-selections debconf
- 
+
 	#Install yunohost packages
+<<<<<<< HEAD
 	debconf-apt-progress --logstderr /var/log/yunohost.log -- apt-get -y install yunohost yunohost-config yunohost-config-postfix postfix postfix-ldap postfix-policyd-spf-perl
 	if [ $? != 0 ] ; 
+=======
+	debconf-apt-progress \
+		--logfile /var/log/yunohost.log \
+		--logstderr /var/log/yunohost.error \
+		-- \
+		apt-get -y install \
+			yunohost \
+			yunohost-config \
+			yunohost-config-postfix \
+			postfix postfix-ldap \
+			postfix-policyd-spf-perl
+
+	if [[ $? -ne 0 ]]
+>>>>>>> 307fa4b0a8fd8391ae5be4caffd1252d9397b012
 	then
-        	echo "Install yunohost Failure"
-        	exit 1
+			echo "======== Installation failed ========"
+            echo "Rolling back have to be done manually !"
+            echo "Check your legacy configuration files => '$LEGACY'"
+            echo "Check install logs => '/var/log/yunohost.log' and '/var/log/yunohost.error'"
+			exit $ERR_FAIL_INSTALL
 	else
-		service slapd restart 
+		service slapd restart
 		service apache2 restart
 		service dovecot restart
 		service postfix restart
@@ -111,11 +163,14 @@ then
 		service iptables start
 		service nscd restart
 		service nslcd restart
-		echo "======== Installation succes ========"
-		  
+		echo "======== Installation success ========"
+        exit $SUCCESS
 	fi
 	
-else 
-	echo "======== Installation cancel ========"
-	exit 1
+else
+	echo "======== Installation cancelled ========"
+	exit $ERR_CANCEL_INSTALL
 fi
+
+# Security : we shouldn't be able to exit here
+exit $ERR_IMPOSSIBLE
