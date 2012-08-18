@@ -61,6 +61,7 @@ EOF
 fi
 
 echo "======== Checking domain ========"
+DOMAIN=$(hostname -d)
 if [[ "${DOMAIN:-1}" = 1 ]]
 then 
 	echo "======== Installation failed ========"
@@ -142,8 +143,7 @@ then
 
 	#Install yunohost packages
 	debconf-apt-progress \
-		--logfile /var/log/yunohost.log \
-		--logstderr /var/log/yunohost.error \
+		--logstderr /var/log/yunohost.log \
 		-- \
 		apt-get -y install \
 			yunohost \
