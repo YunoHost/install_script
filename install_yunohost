@@ -116,13 +116,13 @@ then
 	grep -qri "yunohost" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
-        case "$(lsb_release -is)" in
-            "Debian") 
+        case "$(lsb_release -cs)" in
+            "squueze") 
                 echo "deb http://repo.yunohost.org/ squeeze main" >> $CUSTOMAPT
                 echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
                 ;;
-            "Ubuntu") 
-                echo "deb http://repo.yunohost.org/ precise main" >> $CUSTOMAPT
+            "wheezy") 
+                echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
                 echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
                 ;;
         esac
