@@ -129,7 +129,7 @@ then
 	fi
 	
 	#Update repo	
-	apt-get update -qq
+	debconf-apt-progress -- apt-get update
 	if [[ $? -ne 0 ]]
 	then
 		echo "Update Repo Failure : Rolling back"
@@ -143,7 +143,7 @@ then
 
 	#Install yunohost packages
 	debconf-apt-progress \
-		--logstderr /var/log/yunohost.log \
+		--logfile /var/log/yunohost.log \
 		-- \
 		apt-get -y install \
 			yunohost \
