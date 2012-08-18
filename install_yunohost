@@ -1,4 +1,4 @@
-#!/bin/bash  -x
+#!/bin/bash
 
 SUCCESS=0
 ERR_FAIL_RESTORE=1
