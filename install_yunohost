@@ -117,7 +117,7 @@ then
 	if [[ $? -eq 1 ]]
 	then
         case "$(lsb_release -cs)" in
-            "squueze") 
+            "squeeze") 
                 echo "deb http://repo.yunohost.org/ squeeze main" >> $CUSTOMAPT
                 echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
                 ;;
