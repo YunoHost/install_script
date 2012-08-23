@@ -110,14 +110,7 @@ then
 	grep -qri "lemonldap" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
-	case "$(lsb_release -cs)" in
-            "squeeze") 
-                echo "deb http://lemonldap-ng.org/deb squeeze main" >> $CUSTOMAPT
-                ;;
-            "wheezy") 
-                echo "deb http://repo.yunohost.org/ lemonldap main" >> $CUSTOMAPT
-                ;;
-        esac
+		echo "deb http://lemonldap-ng.org/deb squeeze main" >> $CUSTOMAPT
 	fi
 
 	grep -qri "yunohost" $CUSTOMAPT
