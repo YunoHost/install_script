@@ -16,7 +16,7 @@ function bck {
 
 function rst {
     [[ ! -d "$LEGACY" ]] && echo >&2 "Rollback failed : Unknown folder $LEGACY" && exit $ERR_FAIL_RESTORE
-    mv -fv "$LEGACY"/* /
+    cp -rf "$LEGACY"/* /
     [[ $? -ne 0 ]] && echo >&2 "Rollback failed" && exit $ERR_FAIL_RESTORE
 }
 
