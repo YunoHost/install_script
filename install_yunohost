@@ -133,6 +133,7 @@ then
 		--logfile /var/log/yunohost-update.log \
 		-- \
 		apt-get update
+
 	if [[ $? -ne 0 ]]
 	then
 		echo "Update Repo Failure : Rolling back"
