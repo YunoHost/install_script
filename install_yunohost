@@ -151,7 +151,12 @@ then
 	
 	echo "======== Install ========"
 	#add answer in debconf db
-	debconf-set-selections debconf
+	if [[ $(lsb_release -cs) = "squeeze" ]];
+	then
+		debconf-set-selections debconf
+	elif [[ $(lsb_release -cs) = "wheezy" ]] || [[ $(lsb_release -cs) = "n/a" ]]; 
+		debconf-set-selections debconfv2
+	fi
 
 	#Install yunohost packages
 	debconf-apt-progress \
