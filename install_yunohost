@@ -155,6 +155,7 @@ then
 	then
 		debconf-set-selections debconf
 	elif [[ $(lsb_release -cs) = "wheezy" ]] || [[ $(lsb_release -cs) = "n/a" ]]; 
+	then
 		debconf-set-selections debconfv2
 	fi
 
