@@ -31,12 +31,15 @@ fi
 echo "======== YunoHost Installation ========"
 echo "======== Check dependences ========"
 
-dpkg -l | grep -q lsb-release
-if [[ $? -eq 1 ]]
-then
-	apt-get update -qq
-	apt-get install lsb-release -y
-fi
+apt-get update -qq
+for i in lsb-release wget whiptail
+do
+	dpkg -l | grep -q $i
+	if [[ $? -eq 1 ]]
+	then
+		apt-get install $i -y
+	fi
+done
 
 if [[ ! -f /etc/yunohost/yunohost.conf ]]
 then
@@ -108,6 +111,17 @@ then
 
 	CUSTOMAPT=/etc/apt/sources.list
 	
+	if [[ "$(lsb_release -cs)" = "wheezy" ]] || [[ "$(lsb_release -cs)" = "n/a" ]]
+	then
+		whiptail --title "Yunohost Installation" --yesno "Caution : Yunohost v2 is in development.\nDo you want to proceed install of Yunohost?" 8 78
+		YESNO=$?
+		if [[ $YESNO -eq 0 ]]
+		then
+        		echo "======== Installation cancelled ========"
+		        exit $ERR_CANCEL_INSTALL
+		fi
+	fi
+
 	grep -qri "yunohost" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
@@ -116,9 +130,9 @@ then
                 echo "deb http://repo.yunohost.org/ squeeze main" >> $CUSTOMAPT
                 echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
                 ;;
-            "wheezy"|"n/a") 
-                echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
-                echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
+            "wheezy"|"n/a")
+		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
+	        echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
                 ;;
         esac
 	fi
