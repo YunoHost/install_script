@@ -111,16 +111,16 @@ then
 
 	CUSTOMAPT=/etc/apt/sources.list
 	
-	if [[ "$(lsb_release -cs)" = "wheezy" ]] || [[ "$(lsb_release -cs)" = "n/a" ]]
-	then
-		whiptail --title "Yunohost Installation" --yesno "Caution : Yunohost v2 is in development.\nDo you want to proceed install of Yunohost?" 8 78
-		YESNO=$?
-		if [[ $YESNO -eq 1 ]]
-		then
-        		echo "======== Installation cancelled ========"
-		        exit $ERR_CANCEL_INSTALL
-		fi
-	fi
+	#if [[ "$(lsb_release -cs)" = "wheezy" ]] || [[ "$(lsb_release -cs)" = "n/a" ]]
+	#then
+	#	whiptail --title "Yunohost Installation" --yesno "Caution : Yunohost v2 is in development.\nDo you want to proceed install of Yunohost?" 8 78
+	#	YESNO=$?
+	#	if [[ $YESNO -eq 1 ]]
+	#	then
+        #		echo "======== Installation cancelled ========"
+	#	        exit $ERR_CANCEL_INSTALL
+	#	fi
+	#fi
 
 	grep -qri "yunohost" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
