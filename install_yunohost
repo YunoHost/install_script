@@ -115,7 +115,7 @@ then
 	then
 		whiptail --title "Yunohost Installation" --yesno "Caution : Yunohost v2 is in development.\nDo you want to proceed install of Yunohost?" 8 78
 		YESNO=$?
-		if [[ $YESNO -eq 0 ]]
+		if [[ $YESNO -eq 1 ]]
 		then
         		echo "======== Installation cancelled ========"
 		        exit $ERR_CANCEL_INSTALL
