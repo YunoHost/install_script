@@ -60,6 +60,7 @@ radicale=no
 samba=no
 slapd=no
 ssh=yes
+mysql=no
 EOF
 fi
 
