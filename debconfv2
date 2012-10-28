@@ -1,3 +1,5 @@
+slapd slapd/password1 password yunohost
+slapd slapd/password2 password yunohost
 slapd   slapd/domain    string yunohost.org
 slapd   shared/organization     string yunohost.org
 postfix postfix/main_mailer_type        select Internet Site
@@ -16,3 +18,4 @@ proftpd-basic   shared/proftpd/inetd_or_standalone      select standalone
 iptables-persistent  iptables-persistent/autosave_v6	boolean	false
 iptables-persistent	iptables-persistent/autosave_v4	boolean	false
 libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
+
