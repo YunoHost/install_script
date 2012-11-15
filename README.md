@@ -4,7 +4,7 @@
 
 Afin de pouvoir récupérer le script install_yunohost, il faut avoir git d'installé sur votre machine.
 
-Pour l'installer sur une distribution Debian/Ubuntu:
+Pour l'installer sur une distribution Debian:
 
     # apt-get install git
 
