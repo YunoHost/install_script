@@ -101,7 +101,7 @@ then
 	if [[ $(grep -c "yunohost.$DOMAIN" /etc/hosts) -eq 0 ]]
 	then
         	bck /etc/hosts "$LEGACY"
-    cat <<EOF > $rootfs/etc/hosts
+    		cat <<EOF > $rootfs/etc/hosts
 127.0.0.1   localhost
 127.0.1.1   yunohost.$DOMAIN	yunohost
 
