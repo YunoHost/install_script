@@ -218,6 +218,7 @@ EOF
 		service iptables start
 		service nscd restart
 		service nslcd restart
+		rm /etc/apt/apt.conf.d/local
 		echo "======== Installation success ========"
 	        exit $SUCCESS
 	fi
