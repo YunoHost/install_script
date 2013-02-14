@@ -186,16 +186,11 @@ EOF
 	fi
 
 	#Install yunohost packages
-	cat <<EOF > /etc/apt/apt.conf.d/local
-Dpkg::Options {
-   "--force-confdef";
-   "--force-confold";
-}
-EOF
 	debconf-apt-progress \
 		--logfile /var/log/yunohost.log \
 		-- \
-		apt-get -y install \
+		apt-get -o Dpkg::Options::="--force-confold" \
+			-y install \
 			yunohost \
 			yunohost-config \
 			yunohost-config-postfix \
@@ -218,7 +213,6 @@ EOF
 		service iptables start
 		service nscd restart
 		service nslcd restart
-		rm /etc/apt/apt.conf.d/local
 		echo "======== Installation success ========"
 	        exit $SUCCESS
 	fi
