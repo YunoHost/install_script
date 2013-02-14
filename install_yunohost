@@ -186,11 +186,12 @@ EOF
 	fi
 
 	#Install yunohost packages
+	export DEBIAN_FRONTEND=noninteractive
 	debconf-apt-progress \
 		--logfile /var/log/yunohost.log \
 		-- \
-		apt-get -y install \
-			-o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+		apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+			-y install \
 			yunohost \
 			yunohost-config \
 			yunohost-config-postfix \
