@@ -190,6 +190,7 @@ EOF
 		--logfile /var/log/yunohost.log \
 		-- \
 		apt-get -y install \
+			-o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
 			yunohost \
 			yunohost-config \
 			yunohost-config-postfix \
