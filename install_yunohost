@@ -61,6 +61,7 @@ samba=no
 slapd=no
 ssh=yes
 mysql=no
+prosody=no
 EOF
 fi
 
