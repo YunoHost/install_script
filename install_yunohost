@@ -209,7 +209,12 @@ EOF
 		service apache2 restart
 		service dovecot restart
 		service postfix restart
-		service ejabberd restart
+		if [ "$(lsb_release -cs)" = squeeze ];
+		then
+			service ejabberd restart
+		else
+			service prosody restart
+		fi
 		service iptables start
 		service nscd restart
 		service nslcd restart
