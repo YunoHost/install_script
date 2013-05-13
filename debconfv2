@@ -18,4 +18,3 @@ proftpd-basic   shared/proftpd/inetd_or_standalone      select standalone
 iptables-persistent  iptables-persistent/autosave_v6	boolean	false
 iptables-persistent	iptables-persistent/autosave_v4	boolean	false
 libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
-

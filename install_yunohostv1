@@ -61,7 +61,6 @@ samba=no
 slapd=no
 ssh=yes
 mysql=no
-prosody=no
 EOF
 fi
 
@@ -74,11 +73,11 @@ then
 	exit $ERR_IMPOSSIBLE
 fi
 
-whiptail --title "Yunohost Domain" --yesno "Your domain is $DOMAIN\nDo you want to change this?" 8 78
+whiptail --title "Yunohost Installation" --yesno "Your domain is $DOMAIN\nDo you want to change this?" 8 78
 YESNO=$?
 
 case $YESNO in
-	0) DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Domain" 3>&1 1>&2 2>&3);; # <YES>
+	0) DOMAIN=$(whiptail --inputbox "Enter your new domain please" 8 78 --title "Yunohost Installation" 3>&1 1>&2 2>&3);; # <YES>
 	1) ;; # <NO> => Noting to do here. Just keeping it for the record
 	*) echo >&2 "ERROR: Unknown error ($YESNO) occured. Exiting"; exit $YESNO;; # ERROR
 esac
@@ -118,50 +117,28 @@ EOF
 	fi
 
 	echo "======== Adding repositories ========"
-	#Get gpg key
-	wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
-	wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
-
 	CUSTOMAPT=/etc/apt/sources.list
 	
-	#if [[ "$(lsb_release -cs)" = "wheezy" ]] || [[ "$(lsb_release -cs)" = "n/a" ]]
-	#then
-	#	whiptail --title "Yunohost Installation" --yesno "Caution : Yunohost v2 is in development.\nDo you want to proceed install of Yunohost?" 8 78
-	#	YESNO=$?
-	#	if [[ $YESNO -eq 1 ]]
-	#	then
-        #		echo "======== Installation cancelled ========"
-	#	        exit $ERR_CANCEL_INSTALL
-	#	fi
-	#fi
-
 	grep -qri "yunohost" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
-        case "$(lsb_release -cs)" in
-            "squeeze") 
-                echo "deb http://repo.yunohost.org/ squeeze main" >> $CUSTOMAPT
-                echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
-                ;;
-            "wheezy"|"n/a")
-		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
-	        echo "deb http://repo.yunohost.org/ apps main" >> $CUSTOMAPT
-                ;;
-        esac
+		if [ "$(lsb_release -cs)" != "squeeze" ];
+		then 
+			whiptail --title "Yunohost Installation" --msgbox "Your operating system is not compatible with yunohost v1" 8 78
+			exit $ERR_FAIL_INSTALL
+		fi
 	fi
 	
 	grep -qri "lemonldap" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
-	case "$(lsb_release -cs)" in
-            "squeeze") 
-                echo "deb http://lemonldap-ng.org/deb squeeze main" >> $CUSTOMAPT
-                ;;
-            "wheezy"|"n/a") 
-                echo "deb http://repo.yunohost.org/ lemonldap main" >> $CUSTOMAPT
-                ;;
-        esac	
+		echo "deb http://lemonldap-ng.org/deb squeeze main" >> $CUSTOMAPT
 	fi
+
+        #Get gpg key
+        wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
+        wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
+
 
 	#Update repo	
 	debconf-apt-progress \
@@ -178,13 +155,7 @@ EOF
 	
 	echo "======== Install ========"
 	#add answer in debconf db
-	if [[ $(lsb_release -cs) = "squeeze" ]];
-	then
-		debconf-set-selections debconf
-	elif [[ $(lsb_release -cs) = "wheezy" ]] || [[ $(lsb_release -cs) = "n/a" ]]; 
-	then
-		debconf-set-selections debconfv2
-	fi
+	debconf-set-selections debconfv1
 
 	#Install yunohost packages
 	debconf-apt-progress \
@@ -210,21 +181,17 @@ EOF
 		service apache2 restart
 		service dovecot restart
 		service postfix restart
-		if [ "$(lsb_release -cs)" = squeeze ];
-		then
-			service ejabberd restart
-		else
-			service prosody restart
-		fi
+		service ejabberd restart
 		service iptables start
 		service nscd restart
 		service nslcd restart
-		echo "======== Installation success ========"
+		whiptail --title "Yunohost Installation" --msgbox "Installation success" 8 78
 	        exit $SUCCESS
 	fi
 	
 else
 	echo "======== Installation cancelled ========"
+	
 	exit $ERR_CANCEL_INSTALL
 fi
 
