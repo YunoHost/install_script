@@ -92,7 +92,7 @@ then
 		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
 	fi
 	
-	grep -qri "lemonldap" $CUSTOMAP
+	grep -qri "lemonldap" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
         then
 		echo "deb http://repo.yunohost.org/ lemonldap main" >> $CUSTOMAPT
