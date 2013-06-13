@@ -67,10 +67,9 @@ fi
 echo "======== Checking domain ========"
 DOMAIN=$(hostname -d)
 if [[ "${DOMAIN:-1}" = 1 ]]
-then 
-	echo "======== Installation failed ========"
-	echo "Configure your domain name please"
-	exit $ERR_IMPOSSIBLE
+then
+    hostname yunohost.yunohost.org
+    DOMAIN='yunohost.org'
 fi
 
 whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,apache,prosody,radicale will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
@@ -85,13 +84,13 @@ then
 	echo "======== Adding repositories ========"
 
 	CUSTOMAPT=/etc/apt/sources.list
-	
+
 	grep -qri "yunohost" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
 		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
 	fi
-	
+
 	grep -qri "lemonldap" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
         then
@@ -102,7 +101,7 @@ then
         wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
         wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
 
-	#Update repo	
+	#Update repo
 	debconf-apt-progress \
 		--logfile /var/log/yunohost-update.log \
 		-- \
@@ -114,7 +113,7 @@ then
 		rst "$LEGACY"
 		exit $ERR_FAIL_UPDATE
 	fi
-	
+
 	echo "======== Install ========"
 	#add answer in debconf db
 	debconf-set-selections debconfv2
@@ -143,7 +142,7 @@ then
 		service apache2 restart
 		service dovecot restart
 		service postfix restart
-		service prosody restart
+		service metronome restart
 		service iptables start
 		service nscd restart
 		service nslcd restart
