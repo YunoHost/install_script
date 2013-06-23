@@ -97,7 +97,7 @@ then
 		echo "deb http://repo.yunohost.org/ lemonldap main" >> $CUSTOMAPT
 	fi
 	
-	if [[ $1 == "test" ]]
+	if [[ "$1" == "test" ]]
 	then
 		echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
 	fi
