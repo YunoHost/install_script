@@ -152,19 +152,21 @@ then
 		service iptables start
 		service nscd restart
 		service nslcd restart
+		
 		echo -e "\n"
-		read -p "Proceed to post-installation? (y/n) " -n 1
+		whiptail --title "Post-installation" --yesno "Proceed to post-installation?" 8 78
 		RESULT=1
 		while [ $RESULT -gt 0 ]; do
-			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-				exit 0
-			fi
-			echo -e "\n"
-			/usr/bin/yunohost tools postinstall
-			let RESULT=$?
-			if [ $RESULT -gt 0 ]; then
+			if [[ $YESNO -eq 0 ]]; then
 				echo -e "\n"
-				read -p "Retry? (y/n) " -n 1
+				/usr/bin/yunohost tools postinstall
+				let RESULT=$?
+				if [ $RESULT -gt 0 ]; then
+					echo -e "\n"
+					whiptail --title "Post-installation" --yesno "Post-installation failed, retry ?" 8 78
+				fi
+			else
+				exit 0
 			fi
 		done
 	fi
