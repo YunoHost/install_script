@@ -98,9 +98,10 @@ then
 		echo "deb http://repo.yunohost.org/ lemonldap main" >> $CUSTOMAPT
 	fi
 	
-	if [[ "$1" == "test" ]]
-	then
+	if [ $# -eq 1 ]; then
+	    if [[ "$1" == "test" ]]; then
 		echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
+	    fi
 	fi
 
         #Get gpg key
