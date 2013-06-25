@@ -152,8 +152,21 @@ then
 		service iptables start
 		service nscd restart
 		service nslcd restart
-		IP=$(/sbin/ifconfig | sed '/Bcast/!d' | awk '{print $2}' | sed 's/.*\://')
-		whiptail --title "Yunohost Installation" --msgbox "Installation success\n Connect to http://$IP:6767 for finish installation" 8 78
+		echo -e "\n"
+		read -p "Proceed to post-installation? (y/n) " -n 1
+		RESULT=1
+		while [ $RESULT -gt 0 ]; do
+			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+				exit 0
+			fi
+			echo -e "\n"
+			/usr/bin/yunohost tools postinstall
+			let RESULT=$?
+			if [ $RESULT -gt 0 ]; then
+				echo -e "\n"
+				read -p "Retry? (y/n) " -n 1
+			fi
+		done
 	fi
 
 else
