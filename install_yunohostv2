@@ -156,7 +156,8 @@ then
 
 		echo -e "\n"
 		whiptail --title "Post-installation" --yesno "Proceed to post-installation?" 8 78
-		RESULT=$?
+        YESNO=$?
+		RESULT=1
 		while [ $RESULT -gt 0 ]; do
 			if [[ $YESNO -eq 0 ]]; then
 				echo -e "\n"
@@ -165,6 +166,7 @@ then
 				if [ $RESULT -gt 0 ]; then
 					echo -e "\n"
 					whiptail --title "Post-installation" --yesno "Post-installation failed, retry ?" 8 78
+                    let YESNO=$?
 				fi
 			else
 				exit 0
