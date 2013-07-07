@@ -97,7 +97,7 @@ then
         then
 		echo "deb http://repo.yunohost.org/ lemonldap main" >> $CUSTOMAPT
 	fi
-	
+
 	if [ $# -eq 1 ]; then
 	    if [[ "$1" == "test" ]]; then
 		echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
@@ -153,10 +153,10 @@ then
 		service iptables start
 		service nscd restart
 		service nslcd restart
-		
+
 		echo -e "\n"
 		whiptail --title "Post-installation" --yesno "Proceed to post-installation?" 8 78
-		RESULT=1
+		RESULT=$?
 		while [ $RESULT -gt 0 ]; do
 			if [[ $YESNO -eq 0 ]]; then
 				echo -e "\n"
