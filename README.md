@@ -20,11 +20,11 @@ Placez vous tout d'abord dans le répertoire /tmp:
 
 Récupérez le script grâce à git:
 
-    $ git clone https://github.com/YunoHost/Script.git
+    $ git clone https://github.com/YunoHost/install_script.git
 
 Déplacez vous dans le répertoire Script nouvellement cloné:
 
-    $ cd Script/
+    $ cd install_script/
 
 Rendez le script install_yunohost exécutable:
 
@@ -32,7 +32,11 @@ Rendez le script install_yunohost exécutable:
 
 Exécutez le script:
 
-    $ ./install_yunohost
+    $ ./install_yunohostv1
+
+ou
+
+    $ ./install_yunohostv2
 
 
 Le script va automatiquement lancer l'installation de yunohost sur votre poste ainsi que tous les paquets nécessaires. Répondez simplement aux questions qui vous seront posées.
