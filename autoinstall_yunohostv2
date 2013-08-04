@@ -1,0 +1,158 @@
+#!/bin/bash
+
+SUCCESS=0
+ERR_FAIL_RESTORE=1
+ERR_FAIL_UPDATE=2
+ERR_FAIL_INSTALL=3
+ERR_CANCEL_INSTALL=4
+ERR_IMPOSSIBLE=-1
+
+function bck {
+    FULLPATH="$(readlink -f "$1")"
+    DST="${2%/}/$(dirname $FULLPATH)"
+    mkdir -p "$DST"
+    cp -r --preserve=all "$FULLPATH" "$DST/$(basename $FULLPATH)"
+}
+
+function rst {
+    [[ ! -d "$LEGACY" ]] && echo >&2 "Rollback failed : Unknown folder $LEGACY" && exit $ERR_FAIL_RESTORE
+    cp -rf "$LEGACY"/* /
+    [[ $? -ne 0 ]] && echo >&2 "Rollback failed" && exit $ERR_FAIL_RESTORE
+}
+
+set -u
+echo "Check rights"
+
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+echo "Check dependencies"
+
+apt-get update -qq
+for i in lsb-release wget whiptail
+do
+	dpkg -l | grep -q $i
+	if [[ $? -eq 1 ]]
+	then
+		apt-get install $i -y
+	fi
+done
+
+if [[ ! -f /etc/yunohost/yunohost.conf ]]
+then
+mkdir /etc/yunohost/
+touch /etc/yunohost/from_script
+cat << EOF > /etc/yunohost/yunohost.conf
+#Yunohost custom config
+#to enable yunohost custom config change no by yes
+
+amavis=no
+apache2=no
+dovecot=no
+iptables=no
+lemonldap-ng=no
+postfix=no
+proftpd=no
+radicale=no
+samba=no
+slapd=no
+ssh=yes
+mysql=no
+prosody=no
+EOF
+fi
+
+echo "Checking domain"
+DOMAIN=$(hostname -d)
+if [[ "${DOMAIN:-1}" = 1 ]]
+then
+    hostname yunohost.yunohost.org
+    DOMAIN='yunohost.org'
+fi
+
+YESNO=0
+
+if [[ $YESNO -eq 0 ]]
+then
+	# Backup folder for legacy config files
+	LEGACY=/etc/yunohost/.legacy
+	mkdir -p "$LEGACY"
+
+	echo "Adding repositories"
+
+	CUSTOMAPT=/etc/apt/sources.list
+
+	grep -qri "yunohost" $CUSTOMAPT
+	if [[ $? -eq 1 ]]
+	then
+		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
+	fi
+
+	grep -qri "lemonldap" $CUSTOMAPT
+	if [[ $? -eq 1 ]]
+        then
+		echo "deb http://repo.yunohost.org/ lemonldap main" >> $CUSTOMAPT
+	fi
+
+	if [ $# -eq 1 ]; then
+	    if [[ "$1" == "test" ]]; then
+		echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
+	    fi
+	fi
+
+        #Get gpg key
+        wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
+        wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
+
+	#Update repo
+		apt-get update
+
+	if [[ $? -ne 0 ]]
+	then
+		echo "Update Repo Failure : Rolling back"
+		rst "$LEGACY"
+		exit $ERR_FAIL_UPDATE
+	fi
+
+	echo "Installation"
+	#add answer in debconf db
+	debconf-set-selections debconfv2
+
+	#Install yunohost packages
+		apt-get -o Dpkg::Options::="--force-confold" \
+			-y install \
+			yunohost \
+			yunohost-config \
+			yunohost-config-postfix \
+			postfix postfix-ldap \
+			postfix-policyd-spf-perl
+
+	if [[ $? -ne 0 ]]
+	then
+		echo "Installation failed !"
+		echo "Rolling back have to be done manually"
+		echo "Check your legacy configuration files => '$LEGACY'"
+		echo "Check install logs => '/var/log/yunohost.log' and '/var/log/yunohost.error'"
+		exit $ERR_FAIL_INSTALL
+	else
+		service slapd restart
+		service apache2 restart
+		service dovecot restart
+		service postfix restart
+		service metronome restart
+		service iptables start
+		service nscd restart
+		service nslcd restart
+
+		echo -e "\n"
+	fi
+
+else
+	echo "Installation cancelled"
+	exit $ERR_CANCEL_INSTALL
+fi
+
+# Security : we shouldn't be able to exit here
+exit $ERR_IMPOSSIBLE
