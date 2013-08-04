@@ -107,7 +107,7 @@ then
         wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
 
 	#Update repo
-		apt-get update
+		apt-get update -qq
 
 	if [[ $? -ne 0 ]]
 	then
@@ -123,6 +123,7 @@ then
 	#Install yunohost packages
 		apt-get -o Dpkg::Options::="--force-confold" \
 			-y install \
+            -qq \
 			yunohost \
 			yunohost-config \
 			yunohost-config-postfix \
