@@ -52,7 +52,7 @@ amavis=no
 apache2=no
 dovecot=no
 iptables=no
-lemonldap-ng=no
+ssowat=no
 postfix=no
 proftpd=no
 radicale=no
@@ -90,20 +90,14 @@ then
 		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
 	fi
 
-	grep -qri "lemonldap" $CUSTOMAPT
-	if [[ $? -eq 1 ]]
-        then
-		echo "deb http://repo.yunohost.org/ lemonldap main" >> $CUSTOMAPT
-	fi
-
-	if [ $# -eq 1 ]; then
-	    if [[ "$1" == "test" ]]; then
-		echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
+	if [[ "$1" == "test" ]]; then
+        grep -qri "test" $CUSTOMAPT
+        if [ $# -eq 1 ]; then
+            echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
 	    fi
 	fi
 
         #Get gpg key
-        wget -O- http://lemonldap-ng.org/_media/rpm-gpg-key-ow2 -q | apt-key add - -qq
         wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
 
 	#Update repo
