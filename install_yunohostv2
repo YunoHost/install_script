@@ -50,18 +50,16 @@ cat << EOF > /etc/yunohost/yunohost.conf
 #to enable yunohost custom config change no by yes
 
 amavis=no
-nginx=no
 dovecot=no
 iptables=no
-ssowat=no
+metronome=no
+mysql=no
+nginx=no
 postfix=no
-proftpd=no
-radicale=no
 samba=no
 slapd=no
 ssh=yes
-mysql=no
-prosody=no
+ssowat=no
 EOF
 fi
 
@@ -73,7 +71,7 @@ then
     DOMAIN='yunohost.org'
 fi
 
-whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,apache,prosody,radicale will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
+whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,nginx,metronome will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
 YESNO=$?
 
 if [[ $YESNO -eq 0 ]]
