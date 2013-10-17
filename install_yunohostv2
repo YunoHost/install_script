@@ -50,7 +50,7 @@ cat << EOF > /etc/yunohost/yunohost.conf
 #to enable yunohost custom config change no by yes
 
 amavis=no
-apache2=no
+nginx=no
 dovecot=no
 iptables=no
 ssowat=no
@@ -140,10 +140,6 @@ then
 		exit $ERR_FAIL_INSTALL
 	else
 		service slapd restart
-		service apache2 restart
-		service dovecot restart
-		service postfix restart
-		service metronome restart
 		service iptables start
 		service nscd restart
 		service nslcd restart
