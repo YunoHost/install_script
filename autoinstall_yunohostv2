@@ -31,7 +31,7 @@ fi
 echo "Check dependencies"
 
 apt-get update -qq
-for i in lsb-release wget whiptail
+for i in lsb-release wget dialog whiptail
 do
 	dpkg -l | grep -q $i
 	if [[ $? -eq 1 ]]
@@ -88,12 +88,14 @@ then
 		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
 	fi
 
-	if [[ "$1" == "test" ]]; then
-        grep -qri "test" $CUSTOMAPT
-        if [ $# -eq 1 ]; then
-            echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
-	    fi
-	fi
+    if [ $# -gt 0 ]; then
+        if [[ "$1" == "test" ]]; then
+            grep -qri "test" $CUSTOMAPT
+            if [ $# -eq 1 ]; then
+                echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
+            fi
+        fi
+    fi
 
         #Get gpg key
         wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
