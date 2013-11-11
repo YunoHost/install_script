@@ -122,7 +122,7 @@ then
 			yunohost-config \
 			yunohost-config-postfix \
 			postfix postfix-ldap \
-			postfix-policyd-spf-perl
+			postfix-policyd-spf-perl \
 			yunohost-config-dspam
 
 	if [[ $? -ne 0 ]]
