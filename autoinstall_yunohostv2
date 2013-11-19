@@ -48,6 +48,7 @@ cat << EOF > /etc/yunohost/yunohost.conf
 #Yunohost custom config
 #to enable yunohost custom config change no by yes
 
+dspam=no
 amavis=no
 dovecot=no
 iptables=no
