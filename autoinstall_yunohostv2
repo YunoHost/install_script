@@ -110,6 +110,8 @@ then
 		rst "$LEGACY"
 		exit $ERR_FAIL_UPDATE
 	fi
+	
+	chmod 755 / *
 
 	echo "Installation"
 	#add answer in debconf db
