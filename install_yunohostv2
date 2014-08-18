@@ -21,6 +21,20 @@ function rst {
 }
 
 set -u
+
+echo "======== Get path of current script ======="
+
+# http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+echo "Running from $DIR"
+
 echo "======== Check rights ========"
 
 if [ "$(id -u)" != "0" ]; then
@@ -91,14 +105,14 @@ then
 		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
 	fi
 
-    if [ $# -gt 0 ]; then
-        if [[ "$1" == "test" ]]; then
-            grep -qri "test" $CUSTOMAPT
-            if [ $# -eq 1 ]; then
-                echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
-            fi
-        fi
-    fi
+	if [ $# -gt 0 ]; then
+		if [[ "$1" == "test" ]]; then
+			grep -qri "test" $CUSTOMAPT
+			if [ $# -eq 1 ]; then
+				echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
+			fi
+		fi
+	fi
 
         #Get gpg key
         wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
@@ -118,7 +132,7 @@ then
 
 	echo "======== Install ========"
 	#add answer in debconf db
-	debconf-set-selections debconfv2
+	debconf-set-selections $DIR/debconfv2
 
 	#Install yunohost packages
 	debconf-apt-progress \
@@ -147,7 +161,7 @@ then
 
 		echo -e "\n"
 		whiptail --title "Post-installation" --yesno "Proceed to post-installation?" 8 78
-        YESNO=$?
+		YESNO=$?
 		RESULT=1
 		while [ $RESULT -gt 0 ]; do
 			if [[ $YESNO -eq 0 ]]; then
@@ -157,7 +171,7 @@ then
 				if [ $RESULT -gt 0 ]; then
 					echo -e "\n"
 					whiptail --title "Post-installation" --yesno "Post-installation failed, retry ?" 8 78
-                    let YESNO=$?
+					let YESNO=$?
 				fi
 			else
 				exit 0
