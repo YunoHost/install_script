@@ -113,6 +113,13 @@ then
 				echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
 			fi
 		fi
+		if [[ "$1" == "daily" ]]; then
+			grep -qri "daily" $CUSTOMAPT
+			if [ $# -eq 1 ]; then
+				echo "deb http://daily.yunohost.org/daily/ megusta main" >> $CUSTOMAPT
+				echo "deb http://daily.yunohost.org/test/ wheezy main" >> $CUSTOMAPT
+			fi
+		fi
 	fi
 
         #Get gpg key
