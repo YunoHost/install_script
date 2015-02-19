@@ -107,18 +107,12 @@ then
 	fi
 
 	if [ $# -gt 0 ]; then
-		if [[ "$1" == "test" ]]; then
-			grep -qri "test" $CUSTOMAPT
-			if [ $# -eq 1 ]; then
-				echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
-			fi
+		if [[ "$1" == "test" ]] || [[ "$1" == "testing" ]] ; then
+			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
 		fi
-		if [[ "$1" == "daily" ]]; then
-			grep -qri "daily" $CUSTOMAPT
-			if [ $# -eq 1 ]; then
-				echo "deb http://daily.yunohost.org/daily/ megusta main" >> $CUSTOMAPT
-				echo "deb http://daily.yunohost.org/test/ wheezy main" >> $CUSTOMAPT
-			fi
+		if [[ "$1" == "daily" ]] || [[ "$1" == "unstable" ]] ; then
+			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
+			echo "deb http://daily.yunohost.org/ unstable main" >> $CUSTOMAPT
 		fi
 	fi
 
