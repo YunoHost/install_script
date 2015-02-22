@@ -90,21 +90,15 @@ then
 		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
 	fi
 
-    if [ $# -gt 0 ]; then
-        if [[ "$1" == "test" ]]; then
-            grep -qri "test" $CUSTOMAPT
-            if [ $# -eq 1 ]; then
-                echo "deb http://repo.yunohost.org/ test main" >> $CUSTOMAPT
-            fi
-        fi
-        if [[ "$1" == "daily" ]]; then
-	    grep -qri "daily" $CUSTOMAPT
-            if [ $# -eq 1 ]; then
-                echo "deb http://daily.yunohost.org/daily/ megusta main" >> $CUSTOMAPT
-                echo "deb http://daily.yunohost.org/test/ wheezy main" >> $CUSTOMAPT
-            fi
-        fi
-    fi
+	if [ $# -gt 0 ]; then
+		if [[ "$1" == "test" ]] || [[ "$1" == "testing" ]] ; then
+			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
+		fi
+		if [[ "$1" == "daily" ]] || [[ "$1" == "unstable" ]] ; then
+			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
+			echo "deb http://daily.yunohost.org/ unstable main" >> $CUSTOMAPT
+		fi
+	fi
 
         #Get gpg key
         wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
