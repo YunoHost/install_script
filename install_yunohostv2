@@ -55,6 +55,12 @@ do
 	fi
 done
 
+# Fix install on jessie
+if [ $(lsb_release -c | awk '{print $2}') = jessie ];
+then
+	apt-get install python-xmpp -y
+fi
+
 if [[ ! -f /etc/yunohost/yunohost.conf ]]
 then
 mkdir /etc/yunohost/
