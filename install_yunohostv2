@@ -140,7 +140,12 @@ then
 
 	echo "======== Install ========"
 	#add answer in debconf db
-	debconf-set-selections $DIR/debconfv2
+	if [ $(lsb_release -c | awk '{print $2}') = jessie ];
+	then
+        	debconf-set-selections $DIR/debconfjessie
+	else
+		debconf-set-selections $DIR/debconfv2
+	fi
 
 	#Install yunohost packages
 	debconf-apt-progress \
