@@ -168,7 +168,10 @@ then
 		exit $ERR_FAIL_INSTALL
 	else
 		service slapd restart
-		service iptables start
+		if [ -f /etc/init.d/yunohost-firewall ];
+		then
+			service yunohost-firewall start
+		fi
 		service nscd restart
 		service nslcd restart
 
