@@ -41,6 +41,12 @@ do
 	fi
 done
 
+# Fix install on jessie
+if [ $(lsb_release -c | awk '{print $2}') = jessie ];
+then
+	apt-get install python-xmpp -y
+fi
+
 if [[ ! -f /etc/yunohost/yunohost.conf ]]
 then
 mkdir /etc/yunohost/
@@ -118,7 +124,12 @@ then
 
 	echo "Installation"
 	#add answer in debconf db
-	debconf-set-selections debconfv2
+	if [ $(lsb_release -c | awk '{print $2}') = jessie ];
+	then
+        	debconf-set-selections $DIR/debconfjessie
+	else
+		debconf-set-selections $DIR/debconfv2
+	fi
 
 	#Install yunohost packages
 		apt-get -o Dpkg::Options::="--force-confold" \
