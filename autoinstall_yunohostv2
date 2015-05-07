@@ -6,6 +6,7 @@ ERR_FAIL_UPDATE=2
 ERR_FAIL_INSTALL=3
 ERR_CANCEL_INSTALL=4
 ERR_IMPOSSIBLE=-1
+NO_ERR=0
 
 function bck {
     FULLPATH="$(readlink -f "$1")"
@@ -39,6 +40,12 @@ do
 		apt-get install $i -y
 	fi
 done
+
+# Fix install on jessie
+if [ $(lsb_release -c | awk '{print $2}') = jessie ];
+then
+	apt-get install python-xmpp -y
+fi
 
 if [[ ! -f /etc/yunohost/yunohost.conf ]]
 then
@@ -117,7 +124,12 @@ then
 
 	echo "Installation"
 	#add answer in debconf db
-	debconf-set-selections debconfv2
+	if [ $(lsb_release -c | awk '{print $2}') = jessie ];
+	then
+        	debconf-set-selections $DIR/debconfjessie
+	else
+		debconf-set-selections $DIR/debconfv2
+	fi
 
 	#Install yunohost packages
 		apt-get -o Dpkg::Options::="--force-confold" \
@@ -151,4 +163,4 @@ else
 fi
 
 # Security : we shouldn't be able to exit here
-exit $ERR_IMPOSSIBLE
+exit $NO_ERR
