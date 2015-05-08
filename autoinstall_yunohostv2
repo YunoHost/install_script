@@ -161,9 +161,6 @@ then
 		exit $ERR_FAIL_INSTALL
 	else
 		service slapd restart
-		service iptables start
-		service nscd restart
-		service nslcd restart
 
 		echo -e "\n"
 	fi
