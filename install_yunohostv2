@@ -104,7 +104,7 @@ then
 
 	echo "======== Adding repositories ========"
 
-	CUSTOMAPT=/etc/apt/sources.list
+	CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
 	grep -qri "yunohost" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
@@ -114,11 +114,11 @@ then
 
 	if [ $# -gt 0 ]; then
 		if [[ "$1" == "test" ]] || [[ "$1" == "testing" ]] ; then
-			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
+			echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
 		fi
 		if [[ "$1" == "daily" ]] || [[ "$1" == "unstable" ]] ; then
-			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
-			echo "deb http://daily.yunohost.org/ unstable main" >> $CUSTOMAPT
+			echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
+			echo "deb http://repo.yunohost.org/ unstable main" >> $CUSTOMAPT
 		fi
 	fi
 
