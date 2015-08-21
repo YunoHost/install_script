@@ -110,11 +110,11 @@ then
 
 	if [ $# -gt 0 ]; then
 		if [[ "$1" == "test" ]] || [[ "$1" == "testing" ]] ; then
-			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
+			echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
 		fi
 		if [[ "$1" == "daily" ]] || [[ "$1" == "unstable" ]] ; then
-			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
-			echo "deb http://daily.yunohost.org/ unstable main" >> $CUSTOMAPT
+			echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
+			echo "deb http://repo.yunohost.org/ unstable main" >> $CUSTOMAPT
 		fi
 	fi
 
