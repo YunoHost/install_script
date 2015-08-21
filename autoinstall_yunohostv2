@@ -100,7 +100,7 @@ then
 
 	echo "Adding repositories"
 
-	CUSTOMAPT=/etc/apt/sources.list
+	CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
 	grep -qri "yunohost" $CUSTOMAPT
 	if [[ $? -eq 1 ]]
