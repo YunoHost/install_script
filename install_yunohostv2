@@ -37,7 +37,7 @@ installscript_dependencies() {
     local packages="lsb-release wget whiptail"
 
     debconf-apt-progress                             \
-        --logfile /var/log/yunohost-update.log       \
+        --logfile /var/log/yunohost.log              \
         --                                           \
         apt-get update                               \
         || return 1
@@ -95,7 +95,7 @@ set_domain() {
     # Configure hostname to yunohost.yunohost.org if not already set
     # NOTE: This is done also during postinstall "to avoid amavis bug"
     #       so we might not need it here
-    [ hostname -d ] || hostname yunohost.yunohost.org
+    [ "$(hostname -d)" != "" ] || hostname yunohost.yunohost.org > /dev/null 2>&1
 }
 
 confirm_installation() {
@@ -138,7 +138,7 @@ setup_package_source() {
 
 apt_update() {
     debconf-apt-progress                       \
-        --logfile /var/log/yunohost-update.log \
+        --logfile /var/log/yunohost.log        \
         --                                     \
         apt-get update
 }
@@ -150,6 +150,37 @@ register_debconf() {
     else
         debconf-set-selections $(this_script_path)/debconfv2
     fi
+}
+
+workaround_avahi_installation() {
+    # When attempting several installation of Yunohost on the same host
+    # with a light VM system like LXC
+    # we hit a bug with avahi-daemon postinstallation
+    # This is described in detail in https://github.com/lxc/lxc/issues/25
+    #
+    # It makes the configure step of avahii-daemon fail, because the service does
+    # start correctly. Then all other packages depending on avahi-daemon refuse to
+    # configure themselves.
+    #
+    # The workaround we use is to generate a random uid for the avahi user, and
+    # create the user with this id beforehand, so that the avahi-daemon postinst
+    # script does not do it on its own. Our randomized uid has far less chances to
+    # be already in use in another system than the automated one (which tries to use
+    # consecutive uids).
+   
+    # Get a random unused uid between 500 and 999 (system-user) 
+    local avahi_id=$((500 + $RANDOM % 500))
+    while [ $(cat /etc/passwd | cut -d ':' -f 3 | grep $avahi_id) ] ;
+    do
+        avahi_id=$((500 + $RANDOM % 500))
+    done
+
+    # Use the same adduser parameter as in the avahi-daemon postinst script
+    # Just specify --uid explicitely
+    adduser --disabled-password  --quiet --system     \
+        --home /var/run/avahi-daemon --no-create-home \
+        --gecos "Avahi mDNS daemon" --group avahi     \
+        --uid $avahi_id
 }
 
 install_yunohost_packages() {
@@ -196,7 +227,7 @@ Do you want to proceed with YunoHost post-installation now?
     /usr/bin/yunohost tools postinstall
    
     local POSTINSTALL_EXIT_CODE="$?"
-    while [ "$POSTINSTALL_EXIT_CODE" -gt 0 ] ;
+    while [ "$POSTINSTALL_EXIT_CODE" -ne 0 ] ;
     do
         local text_retry="
 Yunohost post-installation has failed.
@@ -212,6 +243,9 @@ Do you want to try again now?
     return 0   
 }
 
+# Treat unset variables as an error when performing
+# parameter expansion. An error message will be written
+# to the standard error, and a non-interactive shell will exit.
 set -u
 
 if ! ensure_root ; then
@@ -244,6 +278,10 @@ fi
 
 if ! register_debconf ; then
   die "Unable to insert new values into debconf database" 8
+fi
+
+if ! workaround_avahi_installation ; then
+  die "Unable to install workaround for avahi installation" 20
 fi
 
 if ! install_yunohost_packages ; then
