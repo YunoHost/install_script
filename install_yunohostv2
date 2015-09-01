@@ -49,19 +49,6 @@ installscript_dependencies() {
                 $packages                            \
         || return 2
 
-    # on Jessie, we need python-xmpp
-    # TODO : add a comment for why we need this
-    if [ "$(lsb_release -c | awk '{print $2}')" == "jessie" ] ;
-    then
-        debconf-apt-progress                                \
-            --logfile /var/log/yunohost.log                 \
-            --                                              \
-            apt-get -o Dpkg::Options::="--force-confold"    \
-                    -y install                              \
-                    python-xmpp                             \
-        || return 3
-    fi
-
     return 0
 }
 
@@ -252,38 +239,47 @@ if ! ensure_root ; then
   die "This script must be run as root" 1
 fi
 
+echo installscript_dependencies
 if ! installscript_dependencies ; then
   die "Unable to install dependencies to install script" 2 
 fi
 
+echo create_custom_config
 if ! create_custom_config ; then
   die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 3
 fi
 
+echo set_domain
 if ! set_domain ; then
   die "Setting hostname failed" 4
 fi
 
+echo confirm_installation
 if ! confirm_installation ; then
   die "Installation cancelled at your request" 5
 fi
 
+echo setup_package_source
 if ! setup_package_source "$@" ; then
   die "Setting up deb package sources failed" 6
 fi
 
+echo apt_update
 if ! apt_update ; then
   die "Error caught during 'apt-get update'" 7
 fi
 
+echo register_debconf
 if ! register_debconf ; then
   die "Unable to insert new values into debconf database" 8
 fi
 
+echo workaround_avahi_installation
 if ! workaround_avahi_installation ; then
   die "Unable to install workaround for avahi installation" 20
 fi
 
+echo install_yunohost_packages
 if ! install_yunohost_packages ; then
   die "\
 Installation of Yunohost packages failed
@@ -292,10 +288,12 @@ You can check the install logs saved in /var/log/yunohost.log
 " 9
 fi
 
+echo restart_services
 if ! restart_services ; then
   die "Error caught during services restart" 10
 fi
 
+echo post_install
 if ! post_install ; then
   die "Post-installation failed" 11
 fi
