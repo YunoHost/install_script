@@ -1,71 +1,76 @@
 #!/bin/bash
 
-SUCCESS=0
-ERR_FAIL_RESTORE=1
-ERR_FAIL_UPDATE=2
-ERR_FAIL_INSTALL=3
-ERR_CANCEL_INSTALL=4
-ERR_IMPOSSIBLE=-1
-
-function bck {
-    FULLPATH="$(readlink -f "$1")"
-    DST="${2%/}/$(dirname $FULLPATH)"
-    mkdir -p "$DST"
-    cp -r --preserve=all "$FULLPATH" "$DST/$(basename $FULLPATH)"
+print() {
+    printf "%s\n" "$*";
 }
 
-function rst {
-    [[ ! -d "$LEGACY" ]] && echo >&2 "Rollback failed : Unknown folder $LEGACY" && exit $ERR_FAIL_RESTORE
-    cp -rf "$LEGACY"/* /
-    [[ $? -ne 0 ]] && echo >&2 "Rollback failed" && exit $ERR_FAIL_RESTORE
+die() {
+    print "
+Yunohost installation error :
+
+$1" 1>&2
+    exit ${2:-1}
 }
 
-set -u
+this_script_path() {
+    # http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
+    local SOURCE="${BASH_SOURCE[0]}"
+    while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+      local DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+      SOURCE="$(readlink "$SOURCE")"
+      [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+    done
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    echo $DIR
+}
 
-echo "======== Get path of current script ======="
+ensure_root() {
+    if [ "$(id -u)" != "0" ] ;
+    then
+        return 1
+    fi
+    return 0
+}
 
-# http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
-SOURCE="${BASH_SOURCE[0]}"
-while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
-  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
-done
-DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+installscript_dependencies() {
+    # install dependencies of the install script itself
+    local packages="lsb-release wget whiptail"
 
-echo "Running from $DIR"
+    debconf-apt-progress                             \
+        --logfile /var/log/yunohost-update.log       \
+        --                                           \
+        apt-get update                               \
+        || return 1
+    debconf-apt-progress                             \
+        --logfile /var/log/yunohost.log              \
+        --                                           \
+        apt-get -o Dpkg::Options::="--force-confold" \
+                -y install                           \
+                $packages                            \
+        || return 2
 
-echo "======== Check rights ========"
+    # on Jessie, we need python-xmpp
+    # TODO : add a comment for why we need this
+    if [ "$(lsb_release -c | awk '{print $2}')" == "jessie" ] ;
+    then
+        debconf-apt-progress                                \
+            --logfile /var/log/yunohost.log                 \
+            --                                              \
+            apt-get -o Dpkg::Options::="--force-confold"    \
+                    -y install                              \
+                    python-xmpp                             \
+        || return 3
+    fi
 
-if [ "$(id -u)" != "0" ]; then
-   echo "This script must be run as root" 1>&2
-   exit 1
-fi
+    return 0
+}
 
-echo "======== YunoHost Installation ========"
-echo "======== Check dependencies ========"
-
-apt-get update -qq
-for i in lsb-release wget dialog whiptail
-do
-	dpkg -l | grep -q $i
-	if [[ $? -eq 1 ]]
-	then
-		apt-get install $i -y
-	fi
-done
-
-# Fix install on jessie
-if [ $(lsb_release -c | awk '{print $2}') = jessie ];
-then
-	apt-get install python-xmpp -y
-fi
-
-if [[ ! -f /etc/yunohost/yunohost.conf ]]
-then
-mkdir /etc/yunohost/
-touch /etc/yunohost/from_script
-cat << EOF > /etc/yunohost/yunohost.conf
+create_custom_config() {
+    if [[ ! -f /etc/yunohost/yunohost.conf ]]
+    then
+        mkdir /etc/yunohost/
+        touch /etc/yunohost/from_script
+        cat << EOF > /etc/yunohost/yunohost.conf
 # Yunohost custom config
 # If you want to keep a custom service configuration replace "no" by "yes"
 # for the concerned service
@@ -83,122 +88,180 @@ slapd=no
 ssh=yes
 ssowat=no
 EOF
+    fi
+}
+
+set_domain() {
+    # Configure hostname to yunohost.yunohost.org if not already set
+    # NOTE: This is done also during postinstall "to avoid amavis bug"
+    #       so we might not need it here
+    [ hostname -d ] || hostname yunohost.yunohost.org
+}
+
+confirm_installation() {
+  local text="
+Caution !
+
+Your configuration files for :
+  - postfix
+  - dovecot
+  - mysql
+  - nginx
+  - metronome
+will be overwritten !
+
+Are you sure you want  to proceed with the installation of Yunohost?
+"
+  whiptail --title "Yunohost Installation" --yesno "$text" 20 78
+}
+
+setup_package_source() {
+    local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
+
+    # In any case we need the main stable repo
+    echo "deb http://repo.yunohost.org/ megusta main" > $CUSTOMAPT
+
+    # Also add repositories for 'testing' and/or 'unstable' if the script has been called with those arguments
+    if [ $# -gt 0 ]; then
+        if [[ "$1" == "test" ]] || [[ "$1" == "testing" ]] ; then
+            echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
+        fi
+        if [[ "$1" == "daily" ]] || [[ "$1" == "unstable" ]] ; then
+            echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
+            echo "deb http://repo.yunohost.org/ unstable main" >> $CUSTOMAPT
+        fi
+    fi
+
+    # Add YunoHost repository key to the keyring
+    wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
+}
+
+apt_update() {
+    debconf-apt-progress                       \
+        --logfile /var/log/yunohost-update.log \
+        --                                     \
+        apt-get update
+}
+
+register_debconf() {
+    if [ $(lsb_release -c | awk '{print $2}') = jessie ];
+    then
+        debconf-set-selections $(this_script_path)/debconfjessie
+    else
+        debconf-set-selections $(this_script_path)/debconfv2
+    fi
+}
+
+install_yunohost_packages() {
+    debconf-apt-progress                             \
+        --logfile /var/log/yunohost.log              \
+        --                                           \
+        apt-get -o Dpkg::Options::="--force-confold" \
+                -y install                           \
+                yunohost
+}
+
+restart_services() {
+    service slapd restart
+#    service yunohost-firewall start
+#    service nscd restart
+#    service nslcd restart
+
+    # NOTE : We don't fail if slapd fails to restart...
+    return 0
+}
+
+post_install() {
+    local text="
+Yunohost packages have been installed successfully!
+
+You can now proceed with Yunohost post-installation.
+This is where you will be asked for :
+- the main DNS domain name of your server
+- the administration password
+
+You can also perform this step later on your own :
+- either from a shell, by running 'yunohost tools postinstall'
+  as root
+- either from your web browser, by accessing https://yunohost.local
+
+Please refer to https://yunohost.org/#/postinstall
+for additionnal information.
+
+Do you want to proceed with YunoHost post-installation now?
+"
+    whiptail --title "Post-installation" --yesno "$text" 25 78 \
+        || return 0
+
+    /usr/bin/yunohost tools postinstall
+   
+    local POSTINSTALL_EXIT_CODE="$?"
+    while [ "$POSTINSTALL_EXIT_CODE" -gt 0 ] ;
+    do
+        local text_retry="
+Yunohost post-installation has failed.
+
+Do you want to try again now?
+"
+        whiptail --title "Post-installation" --yesno "$text_retry" 12 78 --defaultno \
+            && return $POSTINSTALL_EXIT_CODE
+
+        /usr/bin/yunohost tools postinstall
+        POSTINSTALL_EXIT_CODE="$?"
+    done
+    return 0   
+}
+
+set -u
+
+if ! ensure_root ; then
+  die "This script must be run as root" 1
 fi
 
-echo "======== Checking domain ========"
-DOMAIN=$(hostname -d)
-if [[ "${DOMAIN:-1}" = 1 ]]
-then
-    hostname yunohost.yunohost.org
-    DOMAIN='yunohost.org'
+if ! installscript_dependencies ; then
+  die "Unable to install dependencies to install script" 2 
 fi
 
-whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,nginx,metronome will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
-YESNO=$?
-
-if [[ $YESNO -eq 0 ]]
-then
-	# Backup folder for legacy config files
-	LEGACY=/etc/yunohost/.legacy
-	mkdir -p "$LEGACY"
-
-	echo "======== Adding repositories ========"
-
-	CUSTOMAPT=/etc/apt/sources.list
-
-	grep -qri "yunohost" $CUSTOMAPT
-	if [[ $? -eq 1 ]]
-	then
-		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
-	fi
-
-	if [ $# -gt 0 ]; then
-		if [[ "$1" == "test" ]] || [[ "$1" == "testing" ]] ; then
-			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
-		fi
-		if [[ "$1" == "daily" ]] || [[ "$1" == "unstable" ]] ; then
-			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
-			echo "deb http://daily.yunohost.org/ unstable main" >> $CUSTOMAPT
-		fi
-	fi
-
-        #Get gpg key
-        wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
-
-	#Update repo
-	debconf-apt-progress \
-		--logfile /var/log/yunohost-update.log \
-		-- \
-		apt-get update
-
-	if [[ $? -ne 0 ]]
-	then
-		echo "Update Repo Failure : Rolling back"
-		rst "$LEGACY"
-		exit $ERR_FAIL_UPDATE
-	fi
-
-	echo "======== Install ========"
-	#add answer in debconf db
-	if [ $(lsb_release -c | awk '{print $2}') = jessie ];
-	then
-        	debconf-set-selections $DIR/debconfjessie
-	else
-		debconf-set-selections $DIR/debconfv2
-	fi
-
-	#Install yunohost packages
-	debconf-apt-progress \
-		--logfile /var/log/yunohost.log \
-		-- \
-		apt-get -o Dpkg::Options::="--force-confold" \
-			-y install \
-			yunohost \
-			yunohost-config \
-			yunohost-config-postfix \
-			postfix postfix-ldap \
-			postfix-policyd-spf-perl
-
-	if [[ $? -ne 0 ]]
-	then
-		echo "======== Installation failed ========"
-		echo "Rolling back have to be done manually !"
-		echo "Check your legacy configuration files => '$LEGACY'"
-		echo "Check install logs => '/var/log/yunohost.log' and '/var/log/yunohost.error'"
-		exit $ERR_FAIL_INSTALL
-	else
-		service slapd restart
-		if [ -f /etc/init.d/yunohost-firewall ];
-		then
-			service yunohost-firewall start
-		fi
-		service nscd restart
-		service nslcd restart
-
-		echo -e "\n"
-		whiptail --title "Post-installation" --yesno "Proceed to post-installation?" 8 78
-		YESNO=$?
-		RESULT=1
-		while [ $RESULT -gt 0 ]; do
-			if [[ $YESNO -eq 0 ]]; then
-				echo -e "\n"
-				/usr/bin/yunohost tools postinstall
-				let RESULT=$?
-				if [ $RESULT -gt 0 ]; then
-					echo -e "\n"
-					whiptail --title "Post-installation" --yesno "Post-installation failed, retry ?" 8 78
-					let YESNO=$?
-				fi
-			else
-				exit 0
-			fi
-		done
-	fi
-
-else
-	echo "======== Installation cancelled ========"
-	exit $ERR_CANCEL_INSTALL
+if ! create_custom_config ; then
+  die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 3
 fi
 
-# Security : we shouldn't be able to exit here
-exit $ERR_IMPOSSIBLE
+if ! set_domain ; then
+  die "Setting hostname failed" 4
+fi
+
+if ! confirm_installation ; then
+  die "Installation cancelled at your request" 5
+fi
+
+if ! setup_package_source "$@" ; then
+  die "Setting up deb package sources failed" 6
+fi
+
+if ! apt_update ; then
+  die "Error caught during 'apt-get update'" 7
+fi
+
+if ! register_debconf ; then
+  die "Unable to insert new values into debconf database" 8
+fi
+
+if ! install_yunohost_packages ; then
+  die "\
+Installation of Yunohost packages failed
+
+You can check the install logs saved in /var/log/yunohost.log
+" 9
+fi
+
+if ! restart_services ; then
+  die "Error caught during services restart" 10
+fi
+
+if ! post_install ; then
+  die "Post-installation failed" 11
+fi
+
+# Success !
+exit 0
+
