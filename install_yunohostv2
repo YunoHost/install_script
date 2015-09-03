@@ -121,7 +121,7 @@ set_domain() {
     # Configure hostname to yunohost.yunohost.org if not already set
     # NOTE: This is done also during postinstall "to avoid amavis bug"
     #       so we might not need it here
-    [[ "$(hostname -d > /dev/null 2>&1)" != "" ]] || hostname yunohost.yunohost.org > /dev/null 2>&1
+    [[ "$(hostname -d 2>/dev/null)" != "" ]] || hostname yunohost.yunohost.org > /dev/null 2>&1
 }
 
 confirm_installation() {
