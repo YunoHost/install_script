@@ -125,6 +125,8 @@ set_domain() {
 }
 
 confirm_installation() {
+  [[ "AUTOMODE" == "1" ]] && return 0
+
   local text="
 Caution !
 
@@ -148,14 +150,12 @@ setup_package_source() {
     echo "deb http://repo.yunohost.org/ megusta main" > $CUSTOMAPT
 
     # Also add repositories for 'testing' and/or 'unstable' if the script has been called with those arguments
-    if [[ "$#" -gt "0" ]]; then
-        if [[ "$1" == "test" ]] || [[ "$1" == "testing" ]] ; then
-            echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
-        fi
-        if [[ "$1" == "daily" ]] || [[ "$1" == "unstable" ]] ; then
-            echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
-            echo "deb http://repo.yunohost.org/ unstable main" >> $CUSTOMAPT
-        fi
+    if [[ "$DISTRIB" == "test" ]] || [[ "$DISTRIB" == "testing" ]] ; then
+        echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
+    fi
+    if [[ "$DISTRIB" == "daily" ]] || [[ "$DISTRIB" == "unstable" ]] ; then
+        echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
+        echo "deb http://repo.yunohost.org/ unstable main" >> $CUSTOMAPT
     fi
 
     # Add YunoHost repository key to the keyring
@@ -271,6 +271,9 @@ restart_services() {
 }
 
 post_install() {
+    # No postinstall in auto mode
+    [[ "AUTOMODE" == "1" ]] && return 0
+
     # Remove whiptail and dialog remains...
     clear
 
@@ -314,10 +317,49 @@ Do you want to try again now?
     return 0
 }
 
+usage() {
+  print "
+Usage `basename $0` [-a] [-d <DISTRIB>] [-h]
+
+Options :
+  -a      Enable automatic mode. No questions are asked.
+          This does not do the post-install step.
+  -d      Choose the distribution to install ('stable', 'testing', 'unstable').
+          Defaults to 'stable'
+  -h      Prints this help
+"
+}
+
 # Treat unset variables as an error when performing
 # parameter expansion. An error message will be written
 # to the standard error, and a non-interactive shell will exit.
 set -u
+
+AUTOMODE=0
+DISTRIB=stable
+while getopts ":ad:h" option; do
+  case $option in
+    a)
+      AUTOMODE=1
+      export DEBIAN_FRONTEND=noninteractive
+      ;;
+    d)
+      DISTRIB=$OPTARG
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    :)
+      usage
+      exit 1
+      ;;
+    \?)
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 if ! ensure_root ; then
   die "This script must be run as root" 1
