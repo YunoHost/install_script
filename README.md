@@ -1,4 +1,4 @@
-# YunoHost installation script
+# YunoHost installation scripts
 
 ## Context
 
@@ -24,7 +24,7 @@ If something goes wrong, you can check the installation logs saved in ```/var/lo
 
 ## Advanced usage
 
-The script supports a number of positionnal arguments:
+The script supports a number of positional arguments:
 
     $ bash install_yunohostv2 -h
     Usage :
@@ -38,7 +38,7 @@ The script supports a number of positionnal arguments:
       -h      Prints this help and exit
 
 By specifying ```-a```, the installation will be performed without asking any question.
-This is usefull for fully automated headless installation.
-You will need to perform the post-installation later.
+This is useful for fully automated headless installations.
+The [post-installation](https://yunohost.org/#/postinstall) will need to be performed later.
 
-The ```-d <DISTRIB>``` switch is mostly for advanced users who wants to install the bleeding edge versions of YunoHost packages.
+The ```-d <DISTRIB>``` switch is mostly for advanced users who want to install the bleeding edge versions of YunoHost packages.
