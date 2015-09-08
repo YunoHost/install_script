@@ -334,7 +334,7 @@ Usage :
 
 Options :
   -a      Enable automatic mode. No questions are asked.
-          This does not do the post-install step.
+          This does not perform the post-install step.
   -d      Choose the distribution to install ('stable', 'testing', 'unstable').
           Defaults to 'stable'
   -h      Prints this help and exit
