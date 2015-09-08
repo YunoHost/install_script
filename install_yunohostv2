@@ -15,13 +15,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+YUNOHOST_LOG="/var/log/yunohost.log"
+
 print() {
     printf "%s\n" "$*";
 }
 
 notify_about_install_logs() {
     print "
-Installation logs are located in /var/log/yunohost.log
+Installation logs are located in $YUNOHOST_LOG
 " 1>&2
 
 }
@@ -36,6 +38,15 @@ Success !
 }
 
 die() {
+    # Print to log file
+    print "
+Failure !
+The following error was caught during Yunohost installation :
+
+$1
+" >> $YUNOHOST_LOG
+
+    # Print to terminal
     print "\
 =================================================="
 
@@ -51,16 +62,12 @@ $1
     exit "${2:-1}"
 }
 
-this_script_path() {
-    # http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
-    local SOURCE="${BASH_SOURCE[0]}"
-    while [[ -h "$SOURCE" ]]; do # resolve $SOURCE until the file is no longer a symlink
-      local DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-      SOURCE="$(readlink "$SOURCE")"
-      [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
-    done
-    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-    echo "$DIR"
+step() {
+  echo "------ [ $(date --rfc-3339=seconds) ] - [ start $1 ] -------------------------------------" >> $YUNOHOST_LOG
+  $*
+  local return_code="$?"
+  echo "------ [ $(date --rfc-3339=seconds) ] - [ end   $1 ] -------------------------------------" >> $YUNOHOST_LOG
+  return $return_code
 }
 
 ensure_root() {
@@ -71,24 +78,27 @@ ensure_root() {
     return 0
 }
 
+apt_get_wrapper() {
+    if [[ "$AUTOMODE" == "0" ]] ;
+    then
+      debconf-apt-progress                             \
+          --logfile $YUNOHOST_LOG                      \
+          --                                           \
+          apt-get $*
+    else
+        apt-get $* >> $YUNOHOST_LOG 2>&1
+    fi
+}
+
 installscript_dependencies() {
     # install dependencies of the install script itself
-    local packages="lsb-release wget whiptail"
+    apt_get_wrapper update \
+      || return 1
 
-    debconf-apt-progress                             \
-        --logfile /var/log/yunohost.log              \
-        --                                           \
-        apt-get update                               \
-        || return 1
-    debconf-apt-progress                             \
-        --logfile /var/log/yunohost.log              \
-        --                                           \
-        apt-get -o Dpkg::Options::="--force-confold" \
-                -y install                           \
-                "$packages"                          \
-        || return 2
-
-    return 0
+    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
+                    -y install                           \
+                    lsb-release wget whiptail            \
+      || return 2
 }
 
 create_custom_config() {
@@ -125,7 +135,7 @@ set_domain() {
 }
 
 confirm_installation() {
-  [[ "AUTOMODE" == "1" ]] && return 0
+  [[ "$AUTOMODE" == "1" ]] && return 0
 
   local text="
 Caution !
@@ -163,10 +173,7 @@ setup_package_source() {
 }
 
 apt_update() {
-    debconf-apt-progress                       \
-        --logfile /var/log/yunohost.log        \
-        --                                     \
-        apt-get update
+    apt_get_wrapper update
 }
 
 register_debconf() {
@@ -231,7 +238,10 @@ workaround_avahi_installation() {
     # consecutive uids).
 
     # Return without error if avahi already exists
-    id avahi > /dev/null 2>&1 || return 0
+    if id avahi > /dev/null 2>&1 ; then
+        print "User avahi already exists (with uid $(id avahi)), skipping avahi workaround" >> $YUNOHOST_LOG
+        return 0
+    fi
 
     # Get a random unused uid between 500 and 999 (system-user)
     local avahi_id=$((500 + RANDOM % 500))
@@ -239,6 +249,8 @@ workaround_avahi_installation() {
     do
         avahi_id=$((500 + RANDOM % 500))
     done
+
+    print "Workaround for avahi : creating avahi user with uid $avahi_id" >> $YUNOHOST_LOG
 
     # Use the same adduser parameter as in the avahi-daemon postinst script
     # Just specify --uid explicitely
@@ -249,15 +261,13 @@ workaround_avahi_installation() {
 }
 
 install_yunohost_packages() {
-    debconf-apt-progress                             \
-        --logfile /var/log/yunohost.log              \
-        --                                           \
-        apt-get -o Dpkg::Options::="--force-confold" \
-                -y install                           \
-                yunohost yunohost-config             \
-                yunohost-config-postfix              \
-                postfix postfix-ldap                 \
-                postfix-policyd-spf-perl
+    apt_get_wrapper \
+        -o Dpkg::Options::="--force-confold" \
+        -y install                           \
+        yunohost yunohost-config             \
+        yunohost-config-postfix              \
+        postfix postfix-ldap                 \
+        postfix-policyd-spf-perl
 }
 
 restart_services() {
@@ -272,7 +282,7 @@ restart_services() {
 
 post_install() {
     # No postinstall in auto mode
-    [[ "AUTOMODE" == "1" ]] && return 0
+    [[ "$AUTOMODE" == "1" ]] && return 0
 
     # Remove whiptail and dialog remains...
     clear
@@ -319,14 +329,15 @@ Do you want to try again now?
 
 usage() {
   print "
-Usage `basename $0` [-a] [-d <DISTRIB>] [-h]
+Usage :
+  `basename $0` [-a] [-d <DISTRIB>] [-h]
 
 Options :
   -a      Enable automatic mode. No questions are asked.
           This does not do the post-install step.
   -d      Choose the distribution to install ('stable', 'testing', 'unstable').
           Defaults to 'stable'
-  -h      Prints this help
+  -h      Prints this help and exit
 "
 }
 
@@ -361,55 +372,55 @@ while getopts ":ad:h" option; do
   esac
 done
 
-if ! ensure_root ; then
+if ! step ensure_root ; then
   die "This script must be run as root" 1
 fi
 
-if ! installscript_dependencies ; then
+if ! step installscript_dependencies ; then
   die "Unable to install dependencies to install script" 2
 fi
 
-if ! create_custom_config ; then
+if ! step create_custom_config ; then
   die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 3
 fi
 
-if ! set_domain ; then
+if ! step set_domain ; then
   die "Setting hostname failed" 4
 fi
 
-if ! confirm_installation ; then
+if ! step confirm_installation ; then
   die "Installation cancelled at your request" 5
 fi
 
-if ! setup_package_source "$@" ; then
+if ! step setup_package_source ; then
   die "Setting up deb package sources failed" 6
 fi
 
-if ! apt_update ; then
+if ! step apt_update ; then
   die "Error caught during 'apt-get update'" 7
 fi
 
-if ! register_debconf ; then
+if ! step register_debconf ; then
   die "Unable to insert new values into debconf database" 8
 fi
 
-if ! workaround_avahi_installation ; then
+if ! step workaround_avahi_installation ; then
   die "Unable to install workaround for avahi installation" 20
 fi
 
-if ! install_yunohost_packages ; then
+if ! step install_yunohost_packages ; then
   die "\
 Installation of Yunohost packages failed
 
-You can check the install logs saved in /var/log/yunohost.log
+You can check the install logs saved in $YUNOHOST_LOG
 " 9
 fi
 
-if ! restart_services ; then
+if ! step restart_services ; then
   die "Error caught during services restart" 10
 fi
 
-if ! post_install ; then
+if ! step post_install ; then
   die "Post-installation failed" 11
 fi
 
