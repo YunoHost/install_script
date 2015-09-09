@@ -404,23 +404,19 @@ if ! step register_debconf ; then
 fi
 
 if ! step workaround_avahi_installation ; then
-  die "Unable to install workaround for avahi installation" 20
+  die "Unable to install workaround for avahi installation" 9
 fi
 
 if ! step install_yunohost_packages ; then
-  die "\
-Installation of Yunohost packages failed
-
-You can check the install logs saved in $YUNOHOST_LOG
-" 9
+  die "Installation of Yunohost packages failed" 10
 fi
 
 if ! step restart_services ; then
-  die "Error caught during services restart" 10
+  die "Error caught during services restart" 11
 fi
 
 if ! step post_install ; then
-  die "Post-installation failed" 11
+  die "Post-installation failed" 12
 fi
 
 # Success !
