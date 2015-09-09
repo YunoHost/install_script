@@ -63,10 +63,9 @@ $1
 }
 
 step() {
-  echo "------ [ $(date --rfc-3339=seconds) ] - [ start $1 ] -------------------------------------" >> $YUNOHOST_LOG
+  printf "[ $(date --rfc-3339=seconds) ] ----- [ entering %-30s ]\n" "$1" >> $YUNOHOST_LOG
   $*
   local return_code="$?"
-  echo "------ [ $(date --rfc-3339=seconds) ] - [ end   $1 ] -------------------------------------" >> $YUNOHOST_LOG
   return $return_code
 }
 
