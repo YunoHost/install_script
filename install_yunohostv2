@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-YUNOHOST_LOG="/var/log/yunohost.log"
+YUNOHOST_LOG="/var/log/yunohost-installation.log"
 
 print() {
     printf "%s\n" "$*";
@@ -30,9 +30,7 @@ Installation logs are located in $YUNOHOST_LOG
 
 success() {
     tput setf 2
-    print "
-Success !
-"
+    print "Success !"
     tput sgr 0
     notify_about_install_logs
 }
@@ -47,17 +45,16 @@ $1
 " >> $YUNOHOST_LOG
 
     # Print to terminal
-    print "\
-=================================================="
-
     tput setf 4
-    print "
-Failure !
-The following error was caught during Yunohost installation :
+    print "Failure !"
+    tput sgr 0
+
+    print "\
+The following error was caught during YunoHost installation :
 
 $1
 " 1>&2
-    tput sgr 0
+
     notify_about_install_logs
     exit "${2:-1}"
 }
@@ -89,15 +86,20 @@ apt_get_wrapper() {
     fi
 }
 
+upgrade_system() {
+  apt_get_wrapper update \
+    || return 1
+
+  apt_get_wrapper -y dist-upgrade \
+    || return 2
+}
+
 installscript_dependencies() {
     # install dependencies of the install script itself
-    apt_get_wrapper update \
-      || return 1
-
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
                     -y install                           \
                     lsb-release wget whiptail            \
-      || return 2
+      || return 1
 }
 
 create_custom_config() {
@@ -375,48 +377,52 @@ if ! step ensure_root ; then
   die "This script must be run as root" 1
 fi
 
+if ! step upgrade_system ; then
+  die "Unable to update the system" 2
+fi
+
 if ! step installscript_dependencies ; then
-  die "Unable to install dependencies to install script" 2
+  die "Unable to install dependencies to install script" 3
 fi
 
 if ! step create_custom_config ; then
-  die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 3
+  die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 4
 fi
 
 if ! step set_domain ; then
-  die "Setting hostname failed" 4
+  die "Setting hostname failed" 5
 fi
 
 if ! step confirm_installation ; then
-  die "Installation cancelled at your request" 5
+  die "Installation cancelled at your request" 6
 fi
 
 if ! step setup_package_source ; then
-  die "Setting up deb package sources failed" 6
+  die "Setting up deb package sources failed" 7
 fi
 
 if ! step apt_update ; then
-  die "Error caught during 'apt-get update'" 7
+  die "Error caught during 'apt-get update'" 8
 fi
 
 if ! step register_debconf ; then
-  die "Unable to insert new values into debconf database" 8
+  die "Unable to insert new values into debconf database" 9
 fi
 
 if ! step workaround_avahi_installation ; then
-  die "Unable to install workaround for avahi installation" 9
+  die "Unable to install workaround for avahi installation" 10
 fi
 
 if ! step install_yunohost_packages ; then
-  die "Installation of Yunohost packages failed" 10
+  die "Installation of Yunohost packages failed" 11
 fi
 
 if ! step restart_services ; then
-  die "Error caught during services restart" 11
+  die "Error caught during services restart" 12
 fi
 
 if ! step post_install ; then
-  die "Post-installation failed" 12
+  die "Post-installation failed" 13
 fi
 
 # Success !
