@@ -104,9 +104,10 @@ then
 
 	echo "======== Adding repositories ========"
 
-	CUSTOMAPT=/etc/apt/sources.list
+	DEFAULTAPT=/etc/apt/sources.list
+	CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
-	grep -qri "yunohost" $CUSTOMAPT
+	grep -qri 'yunohost' $DEFAULTAPT || grep -qri 'yunohost' $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
 		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
