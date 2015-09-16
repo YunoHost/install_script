@@ -7,24 +7,28 @@ ERR_FAIL_INSTALL=3
 ERR_CANCEL_INSTALL=4
 ERR_IMPOSSIBLE=-1
 
-function bck {
+bck() {
     FULLPATH="$(readlink -f "$1")"
     DST="${2%/}/$(dirname $FULLPATH)"
     mkdir -p "$DST"
     cp -r --preserve=all "$FULLPATH" "$DST/$(basename $FULLPATH)"
 }
 
-function rst {
-    [[ ! -d "$LEGACY" ]] && echo >&2 "Rollback failed : Unknown folder $LEGACY" && exit $ERR_FAIL_RESTORE
-    cp -rf "$LEGACY"/* /
-    [[ $? -ne 0 ]] && echo >&2 "Rollback failed" && exit $ERR_FAIL_RESTORE
+rst() {
+    if [[ ! -d "$LEGACY" ]]; then;
+		echo >&2 "Rollback failed: Unknown folder $LEGACY" && exit $ERR_FAIL_RESTORE
+	fi
+    cp -rf -- "$LEGACY"/* /
+    if [[ $? -ne 0 ]]; then;
+		echo >&2 "Rollback failed" && exit $ERR_FAIL_RESTORE
+	fi
 }
 
 set -u
 
-echo "======== Get path of current script ======="
+echo '======== Get path of current script ======='
 
-# http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
+# https://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
   DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
@@ -35,15 +39,19 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 echo "Running from $DIR"
 
-echo "======== Check rights ========"
+echo '======== Check rights ========'
 
-if [ "$(id -u)" != "0" ]; then
-   echo "This script must be run as root" 1>&2
+if [ "$(id -u)" != '0' ]; then
+   echo 'This script must be run as root' 1>&2
    exit 1
 fi
 
-echo "======== YunoHost Installation ========"
-echo "======== Check dependencies ========"
+echo '======== YunoHost Installation ========'
+echo '======== Check dependencies ========'
+
+WHIPTAIL_HEIGHT=8
+WHIPTAIL_WIDTH=78
+WHIPTAIL_DIM="$WHIPTAIL_HEIGHT $WHIPTAIL_WIDTH"
 
 apt-get update -qq
 for i in lsb-release wget dialog whiptail
@@ -85,7 +93,7 @@ ssowat=no
 EOF
 fi
 
-echo "======== Checking domain ========"
+echo '======== Checking domain ========'
 DOMAIN=$(hostname -d)
 if [[ "${DOMAIN:-1}" = 1 ]]
 then
@@ -93,7 +101,8 @@ then
     DOMAIN='yunohost.org'
 fi
 
-whiptail --title "Yunohost Installation" --yesno "Caution : your config files for postfix,dovecot,mysql,nginx,metronome will be overwritten\nDo you want to proceed install of Yunohost?" 8 78
+whiptail --title 'Yunohost Installation' \
+	--yesno "Caution : your config files for postfix,dovecot,mysql,nginx,metronome will be overwritten\nDo you want to proceed install of Yunohost?" $WHIPTAIL_DIM
 YESNO=$?
 
 if [[ $YESNO -eq 0 ]]
@@ -102,28 +111,28 @@ then
 	LEGACY=/etc/yunohost/.legacy
 	mkdir -p "$LEGACY"
 
-	echo "======== Adding repositories ========"
+	echo '======== Adding repositories ========'
 
 	CUSTOMAPT=/etc/apt/sources.list
 
-	grep -qri "yunohost" $CUSTOMAPT
+	grep -qri 'yunohost' $CUSTOMAPT
 	if [[ $? -eq 1 ]]
 	then
-		echo "deb http://repo.yunohost.org/ megusta main" >> $CUSTOMAPT
+		echo 'deb http://repo.yunohost.org/ megusta main' >> $CUSTOMAPT
 	fi
 
 	if [ $# -gt 0 ]; then
-		if [[ "$1" == "test" ]] || [[ "$1" == "testing" ]] ; then
-			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
+		if [[ "$1" == 'test' ]] || [[ "$1" == 'testing' ]] ; then
+			echo 'deb http://daily.yunohost.org/ testing main' >> $CUSTOMAPT
 		fi
-		if [[ "$1" == "daily" ]] || [[ "$1" == "unstable" ]] ; then
-			echo "deb http://daily.yunohost.org/ testing main" >> $CUSTOMAPT
-			echo "deb http://daily.yunohost.org/ unstable main" >> $CUSTOMAPT
+		if [[ "$1" == 'daily' ]] || [[ "$1" == 'unstable' ]] ; then
+			echo 'deb http://daily.yunohost.org/ testing main' >> $CUSTOMAPT
+			echo 'deb http://daily.yunohost.org/ unstable main' >> $CUSTOMAPT
 		fi
 	fi
 
-        #Get gpg key
-        wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
+	#Get gpg key
+	wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq
 
 	#Update repo
 	debconf-apt-progress \
@@ -133,12 +142,12 @@ then
 
 	if [[ $? -ne 0 ]]
 	then
-		echo "Update Repo Failure : Rolling back"
+		echo 'Update Repo Failure: Rolling back'
 		rst "$LEGACY"
 		exit $ERR_FAIL_UPDATE
 	fi
 
-	echo "======== Install ========"
+	echo '======== Install ========'
 	#add answer in debconf db
 	if [ $(lsb_release -c | awk '{print $2}') = jessie ];
 	then
@@ -161,10 +170,15 @@ then
 
 	if [[ $? -ne 0 ]]
 	then
-		echo "======== Installation failed ========"
-		echo "Rolling back have to be done manually !"
+		echo '======== Installation failed ========'
+		echo 'Rolling back have to be done manually !'
 		echo "Check your legacy configuration files => '$LEGACY'"
-		echo "Check install logs => '/var/log/yunohost.log' and '/var/log/yunohost.error'"
+		echo -n 'Check install logs => "/var/log/yunohost.log"'
+		if test -e /var/log/yunohost.error
+		then
+			echo -n ' and "/var/log/yunohost.error"'
+		fi
+		echo
 		exit $ERR_FAIL_INSTALL
 	else
 		service slapd restart
@@ -176,7 +190,7 @@ then
 		service nslcd restart
 
 		echo -e "\n"
-		whiptail --title "Post-installation" --yesno "Proceed to post-installation?" 8 78
+		whiptail --title 'Post-installation' --yesno 'Proceed to post-installation?' $WHIPTAIL_DIM
 		YESNO=$?
 		RESULT=1
 		while [ $RESULT -gt 0 ]; do
@@ -186,7 +200,7 @@ then
 				let RESULT=$?
 				if [ $RESULT -gt 0 ]; then
 					echo -e "\n"
-					whiptail --title "Post-installation" --yesno "Post-installation failed, retry ?" 8 78
+					whiptail --title 'Post-installation' --yesno 'Post-installation failed, retry?' $WHIPTAIL_DIM
 					let YESNO=$?
 				fi
 			else
@@ -196,7 +210,7 @@ then
 	fi
 
 else
-	echo "======== Installation cancelled ========"
+	echo '======== Installation cancelled ========'
 	exit $ERR_CANCEL_INSTALL
 fi
 
