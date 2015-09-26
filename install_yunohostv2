@@ -128,14 +128,6 @@ EOF
     fi
 }
 
-set_domain() {
-    # Configure hostname to yunohost.yunohost.org if not already set
-    # NOTE: This is done also during postinstall "to avoid amavis bug"
-    #       so we might not need it here
-    [[ "$(hostname -d 2>/dev/null)" != "" ]] || hostname yunohost.yunohost.org \
-    || echo 'Hostname change is not permitted' > /dev/null 2>&1
-}
-
 confirm_installation() {
   [[ "$AUTOMODE" == "1" ]] && return 0
 
@@ -390,40 +382,36 @@ if ! step create_custom_config ; then
   die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 4
 fi
 
-if ! step set_domain ; then
-  die "Setting hostname failed" 5
-fi
-
 if ! step confirm_installation ; then
-  die "Installation cancelled at your request" 6
+  die "Installation cancelled at your request" 5
 fi
 
 if ! step setup_package_source ; then
-  die "Setting up deb package sources failed" 7
+  die "Setting up deb package sources failed" 6
 fi
 
 if ! step apt_update ; then
-  die "Error caught during 'apt-get update'" 8
+  die "Error caught during 'apt-get update'" 7
 fi
 
 if ! step register_debconf ; then
-  die "Unable to insert new values into debconf database" 9
+  die "Unable to insert new values into debconf database" 8
 fi
 
 if ! step workaround_avahi_installation ; then
-  die "Unable to install workaround for avahi installation" 10
+  die "Unable to install workaround for avahi installation" 9
 fi
 
 if ! step install_yunohost_packages ; then
-  die "Installation of Yunohost packages failed" 11
+  die "Installation of Yunohost packages failed" 10
 fi
 
 if ! step restart_services ; then
-  die "Error caught during services restart" 12
+  die "Error caught during services restart" 11
 fi
 
 if ! step post_install ; then
-  die "Post-installation failed" 13
+  die "Post-installation failed" 12
 fi
 
 # Success !
