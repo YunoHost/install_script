@@ -97,7 +97,7 @@ upgrade_system() {
 installscript_dependencies() {
     # install dependencies of the install script itself
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y install                           \
+                    -y --force-yes install               \
                     lsb-release wget whiptail            \
       || return 1
 }
@@ -257,7 +257,7 @@ workaround_avahi_installation() {
 install_yunohost_packages() {
     apt_get_wrapper \
         -o Dpkg::Options::="--force-confold" \
-        -y install                           \
+        -y --force-yes install               \
         yunohost yunohost-config             \
         yunohost-config-postfix              \
         postfix postfix-ldap                 \
