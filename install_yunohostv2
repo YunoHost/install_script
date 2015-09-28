@@ -97,7 +97,7 @@ upgrade_system() {
 installscript_dependencies() {
     # install dependencies of the install script itself
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y install                           \
+                    -y --force-yes install               \
                     lsb-release wget whiptail            \
       || return 1
 }
@@ -126,13 +126,6 @@ ssh=yes
 ssowat=no
 EOF
     fi
-}
-
-set_domain() {
-    # Configure hostname to yunohost.yunohost.org if not already set
-    # NOTE: This is done also during postinstall "to avoid amavis bug"
-    #       so we might not need it here
-    [[ "$(hostname -d 2>/dev/null)" != "" ]] || hostname yunohost.yunohost.org > /dev/null 2>&1
 }
 
 confirm_installation() {
@@ -180,7 +173,7 @@ apt_update() {
 register_debconf() {
     if [[ $(lsb_release -c | awk '{print $2}') == jessie ]];
     then
-        cat << EOF > debconf-set-selections
+        debconf-set-selections << EOF 
 slapd slapd/password1 password yunohost
 slapd slapd/password2 password yunohost
 slapd slapd/domain    string yunohost.org
@@ -201,7 +194,7 @@ nslcd	nslcd/ldap-base	string	dc=yunohost,dc=org
 libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
 EOF
     else
-      cat << EOF > debconf-set-selections
+      debconf-set-selections << EOF
 slapd slapd/password1 password yunohost
 slapd slapd/password2 password yunohost
 slapd slapd/domain    string yunohost.org
@@ -246,7 +239,7 @@ workaround_avahi_installation() {
 
     # Get a random unused uid between 500 and 999 (system-user)
     local avahi_id=$((500 + RANDOM % 500))
-    while ! cut -d ':' -f 3 /etc/passwd | grep -q $avahi_id ;
+    while cut -d ':' -f 3 /etc/passwd | grep -q $avahi_id ;
     do
         avahi_id=$((500 + RANDOM % 500))
     done
@@ -264,7 +257,7 @@ workaround_avahi_installation() {
 install_yunohost_packages() {
     apt_get_wrapper \
         -o Dpkg::Options::="--force-confold" \
-        -y install                           \
+        -y --force-yes install               \
         yunohost yunohost-config             \
         yunohost-config-postfix              \
         postfix postfix-ldap                 \
@@ -274,8 +267,8 @@ install_yunohost_packages() {
 restart_services() {
     service slapd restart
 #    service yunohost-firewall start
-#    service nscd restart
-#    service nslcd restart
+    service nscd restart
+    service nslcd restart
 
     # NOTE : We don't fail if slapd fails to restart...
     return 0
@@ -389,40 +382,36 @@ if ! step create_custom_config ; then
   die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 4
 fi
 
-if ! step set_domain ; then
-  die "Setting hostname failed" 5
-fi
-
 if ! step confirm_installation ; then
-  die "Installation cancelled at your request" 6
+  die "Installation cancelled at your request" 5
 fi
 
 if ! step setup_package_source ; then
-  die "Setting up deb package sources failed" 7
+  die "Setting up deb package sources failed" 6
 fi
 
 if ! step apt_update ; then
-  die "Error caught during 'apt-get update'" 8
+  die "Error caught during 'apt-get update'" 7
 fi
 
 if ! step register_debconf ; then
-  die "Unable to insert new values into debconf database" 9
+  die "Unable to insert new values into debconf database" 8
 fi
 
 if ! step workaround_avahi_installation ; then
-  die "Unable to install workaround for avahi installation" 10
+  die "Unable to install workaround for avahi installation" 9
 fi
 
 if ! step install_yunohost_packages ; then
-  die "Installation of Yunohost packages failed" 11
+  die "Installation of Yunohost packages failed" 10
 fi
 
 if ! step restart_services ; then
-  die "Error caught during services restart" 12
+  die "Error caught during services restart" 11
 fi
 
 if ! step post_install ; then
-  die "Post-installation failed" 13
+  die "Post-installation failed" 12
 fi
 
 # Success !
