@@ -239,7 +239,7 @@ workaround_avahi_installation() {
 
     # Get a random unused uid between 500 and 999 (system-user)
     local avahi_id=$((500 + RANDOM % 500))
-    while ! cut -d ':' -f 3 /etc/passwd | grep -q $avahi_id ;
+    while cut -d ':' -f 3 /etc/passwd | grep -q $avahi_id ;
     do
         avahi_id=$((500 + RANDOM % 500))
     done
