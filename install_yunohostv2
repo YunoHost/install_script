@@ -173,7 +173,7 @@ apt_update() {
 register_debconf() {
     if [[ $(lsb_release -c | awk '{print $2}') == jessie ]];
     then
-        cat << EOF > debconf-set-selections
+        debconf-set-selections << EOF 
 slapd slapd/password1 password yunohost
 slapd slapd/password2 password yunohost
 slapd slapd/domain    string yunohost.org
@@ -194,7 +194,7 @@ nslcd	nslcd/ldap-base	string	dc=yunohost,dc=org
 libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
 EOF
     else
-      cat << EOF > debconf-set-selections
+      debconf-set-selections << EOF
 slapd slapd/password1 password yunohost
 slapd slapd/password2 password yunohost
 slapd slapd/domain    string yunohost.org
