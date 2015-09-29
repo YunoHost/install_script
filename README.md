@@ -1,42 +1,44 @@
-# Script
+# YunoHost installation scripts
 
-## Prérequis
+## Context
 
-Afin de pouvoir récupérer le script install_yunohost, il faut avoir git d'installé sur votre machine.
+The scripts in this repository will install [YunoHost](https://yunohost.org/) on a Debian system.
 
-Pour l'installer sur une distribution Debian:
+Only Debian 7 (aka wheezy) and 8 (aka jessie) are supported.
 
-    # apt-get install git
+## Basic usage
 
-ou
-
-    $ sudo apt-get install git
-
-## Récuperation du script
-
-Placez vous tout d'abord dans le répertoire /tmp:
+Go into a temporary folder, e.g. ```/tmp```:
 
     $ cd /tmp
 
-Récupérez le script grâce à git:
+Get the install script:
 
-    $ git clone https://github.com/YunoHost/install_script.git
+    $ wget https://raw.githubusercontent.com/YunoHost/install_script/master/install_yunohostv2
 
-Déplacez vous dans le répertoire Script nouvellement cloné:
+Execute the script:
 
-    $ cd install_script/
+    $ bash install_yunohostv2
 
-Rendez le script install_yunohost exécutable:
+If something goes wrong, you can check the installation logs saved in ```/var/log/yunohost.log```
 
-    $ chmod o+x install_yunohost
+## Advanced usage
 
-Exécutez le script:
+The script supports a number of positional arguments:
 
-    $ ./install_yunohostv1
+    $ bash install_yunohostv2 -h
+    Usage :
+      install_yunohostv2 [-a] [-d <DISTRIB>] [-h]
 
-ou
+    Options :
+      -a      Enable automatic mode. No questions are asked.
+              This does not perform the post-install step.
+      -d      Choose the distribution to install ('stable', 'testing', 'unstable').
+              Defaults to 'stable'
+      -h      Prints this help and exit
 
-    $ ./install_yunohostv2
+By specifying ```-a```, the installation will be performed without asking any question.
+This is useful for fully automated headless installations.
+The [post-installation](https://yunohost.org/#/postinstall) will need to be performed later.
 
-
-Le script va automatiquement lancer l'installation de yunohost sur votre poste ainsi que tous les paquets nécessaires. Répondez simplement aux questions qui vous seront posées.
+The ```-d <DISTRIB>``` switch is mostly for advanced users who want to install the bleeding edge versions of YunoHost packages.
