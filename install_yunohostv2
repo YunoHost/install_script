@@ -103,11 +103,12 @@ installscript_dependencies() {
 }
 
 create_custom_config() {
-    if [[ ! -f /etc/yunohost/yunohost.conf ]]
-    then
-        mkdir /etc/yunohost/
-        touch /etc/yunohost/from_script
-        cat << EOF > /etc/yunohost/yunohost.conf
+    if [[ "$DISTRIB" != "daily" ]] && [[ "$DISTRIB" != "unstable" ]] ; then
+        if [[ ! -f /etc/yunohost/yunohost.conf ]]
+        then
+            mkdir -p /etc/yunohost/
+            touch /etc/yunohost/from_script
+            cat << EOF > /etc/yunohost/yunohost.conf
 # Yunohost custom config
 # If you want to keep a custom service configuration replace "no" by "yes"
 # for the concerned service
@@ -124,6 +125,10 @@ slapd=no
 ssh=yes
 ssowat=no
 EOF
+        fi
+    else
+        mkdir -p /etc/yunohost/
+        touch /etc/yunohost/from_script
     fi
 }
 
@@ -263,13 +268,22 @@ workaround_avahi_installation() {
 }
 
 install_yunohost_packages() {
-    apt_get_wrapper \
-        -o Dpkg::Options::="--force-confold" \
-        -y --force-yes install               \
-        yunohost yunohost-config             \
-        yunohost-config-postfix              \
-        postfix postfix-ldap                 \
-        postfix-policyd-spf-perl
+    if [[ "$DISTRIB" != "daily" ]] && [[ "$DISTRIB" != "unstable" ]] ; then
+        apt_get_wrapper \
+            -o Dpkg::Options::="--force-confold" \
+            -y --force-yes install               \
+            yunohost yunohost-config             \
+            yunohost-config-postfix              \
+            postfix postfix-ldap                 \
+            postfix-policyd-spf-perl
+    else
+        apt_get_wrapper \
+            -o Dpkg::Options::="--force-confold" \
+            -y --force-yes install               \
+            yunohost                             \
+            postfix postfix-ldap                 \
+            postfix-policyd-spf-perl
+    fi
 }
 
 restart_services() {
