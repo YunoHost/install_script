@@ -42,3 +42,7 @@ This is useful for fully automated headless installations.
 The [post-installation](https://yunohost.org/#/postinstall) will need to be performed later.
 
 The ```-d <DISTRIB>``` switch is mostly for advanced users who want to install the bleeding edge versions of YunoHost packages.
+
+## Issues, Feedback
+
+Please report issues here : https://dev.yunohost.org/projects/yunohost/issues
