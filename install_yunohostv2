@@ -171,8 +171,7 @@ setup_package_source() {
         echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
     fi
     if [[ "$DISTRIB" == "daily" ]] || [[ "$DISTRIB" == "unstable" ]] ; then
-        echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
-        echo "deb http://repo.yunohost.org/ unstable main" >> $CUSTOMAPT
+        echo "deb http://repo.yunohost.org/debian stable testing unstable" > $CUSTOMAPT
     fi
 
     # Add YunoHost repository key to the keyring
