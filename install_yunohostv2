@@ -168,7 +168,7 @@ setup_package_source() {
 
     # Also add repositories for 'testing' and/or 'unstable' if the script has been called with those arguments
     if [[ "$DISTRIB" == "test" ]] || [[ "$DISTRIB" == "testing" ]] ; then
-        echo "deb http://repo.yunohost.org/ testing main" >> $CUSTOMAPT
+        echo "deb http://repo.yunohost.org/debian stable testing" >> $CUSTOMAPT
     fi
     if [[ "$DISTRIB" == "daily" ]] || [[ "$DISTRIB" == "unstable" ]] ; then
         echo "deb http://repo.yunohost.org/debian stable testing unstable" > $CUSTOMAPT
