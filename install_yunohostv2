@@ -267,7 +267,8 @@ workaround_avahi_installation() {
 }
 
 install_yunohost_packages() {
-    if [[ "$DISTRIB" != "daily" ]] && [[ "$DISTRIB" != "unstable" ]] ; then
+    if [[ "$DISTRIB" != "daily" ]] && [[ "$DISTRIB" != "unstable" ]] \
+    && [[ "$DISTRIB" != "test" ]] && [[ "$DISTRIB" != "testing" ]] ; then
         apt_get_wrapper \
             -o Dpkg::Options::="--force-confold" \
             -y --force-yes install               \
