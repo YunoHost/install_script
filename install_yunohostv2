@@ -103,7 +103,8 @@ installscript_dependencies() {
 }
 
 create_custom_config() {
-    if [[ "$DISTRIB" != "daily" ]] && [[ "$DISTRIB" != "unstable" ]] ; then
+    if [[ "$DISTRIB" != "daily" ]] && [[ "$DISTRIB" != "unstable" ]] \
+    && [[ "$DISTRIB" != "test" ]] && [[ "$DISTRIB" != "testing" ]] ; then
         if [[ ! -f /etc/yunohost/yunohost.conf ]]
         then
             mkdir -p /etc/yunohost/
