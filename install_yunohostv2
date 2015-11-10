@@ -281,7 +281,7 @@ install_yunohost_packages() {
         apt_get_wrapper \
             -o Dpkg::Options::="--force-confold" \
             -y --force-yes install               \
-            yunohost
+            yunohost postfix
     fi
 }
 
