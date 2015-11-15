@@ -103,34 +103,8 @@ installscript_dependencies() {
 }
 
 create_custom_config() {
-    if [[ "$DISTRIB" != "daily" ]] && [[ "$DISTRIB" != "unstable" ]] \
-    && [[ "$DISTRIB" != "test" ]] && [[ "$DISTRIB" != "testing" ]] ; then
-        if [[ ! -f /etc/yunohost/yunohost.conf ]]
-        then
-            mkdir -p /etc/yunohost/
-            touch /etc/yunohost/from_script
-            cat << EOF > /etc/yunohost/yunohost.conf
-# Yunohost custom config
-# If you want to keep a custom service configuration replace "no" by "yes"
-# for the concerned service
-
-amavis=no
-avahi=no
-dovecot=no
-iptables=no
-metronome=no
-mysql=no
-nginx=no
-postfix=no
-slapd=no
-ssh=yes
-ssowat=no
-EOF
-        fi
-    else
-        mkdir -p /etc/yunohost/
-        touch /etc/yunohost/from_script
-    fi
+    mkdir -p /etc/yunohost/
+    touch /etc/yunohost/from_script
 }
 
 set_domain() {
@@ -164,15 +138,14 @@ Are you sure you want  to proceed with the installation of Yunohost?
 setup_package_source() {
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
-    # In any case we need the main stable repo
-    echo "deb http://repo.yunohost.org/ megusta main" > $CUSTOMAPT
-
-    # Also add repositories for 'testing' and/or 'unstable' if the script has been called with those arguments
+    if [[ "$DISTRIB" == "megusta" ]] || [[ "$DISTRIB" == "stable" ]] ; then
+        echo "deb http://repo.yunohost.org/debian jessie stable" > $CUSTOMAPT
+    fi
     if [[ "$DISTRIB" == "test" ]] || [[ "$DISTRIB" == "testing" ]] ; then
-        echo "deb http://repo.yunohost.org/debian stable testing" >> $CUSTOMAPT
+        echo "deb http://repo.yunohost.org/debian jessie testing" > $CUSTOMAPT
     fi
     if [[ "$DISTRIB" == "daily" ]] || [[ "$DISTRIB" == "unstable" ]] ; then
-        echo "deb http://repo.yunohost.org/debian stable testing unstable" > $CUSTOMAPT
+        echo "deb http://repo.yunohost.org/debian jessie testing unstable" > $CUSTOMAPT
     fi
 
     # Add YunoHost repository key to the keyring
@@ -184,9 +157,7 @@ apt_update() {
 }
 
 register_debconf() {
-    if [[ $(lsb_release -c | awk '{print $2}') == jessie ]];
-    then
-        debconf-set-selections << EOF 
+    debconf-set-selections << EOF 
 slapd slapd/password1 password yunohost
 slapd slapd/password2 password yunohost
 slapd slapd/domain    string yunohost.org
@@ -206,25 +177,6 @@ nslcd	nslcd/ldap-binddn	string
 nslcd	nslcd/ldap-base	string	dc=yunohost,dc=org
 libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
 EOF
-    else
-      debconf-set-selections << EOF
-slapd slapd/password1 password yunohost
-slapd slapd/password2 password yunohost
-slapd slapd/domain    string yunohost.org
-slapd shared/organization     string yunohost.org
-postfix postfix/main_mailer_type        select Internet Site
-postfix postfix/mailname string /etc/mailname
-mysql-server-5.5 mysql-server/root_password password yunohost
-mysql-server-5.5 mysql-server/root_password_again password yunohost
-nslcd	nslcd/ldap-bindpw	password
-nslcd	nslcd/ldap-starttls	boolean	false
-nslcd	nslcd/ldap-reqcert	select
-nslcd	nslcd/ldap-uris	string	ldap://localhost/
-nslcd	nslcd/ldap-binddn	string
-nslcd	nslcd/ldap-base	string	dc=yunohost,dc=org
-libnss-ldapd libnss-ldapd/nsswitch multiselect group, passwd, shadow
-EOF
-    fi
 }
 
 workaround_avahi_installation() {
@@ -268,21 +220,10 @@ workaround_avahi_installation() {
 }
 
 install_yunohost_packages() {
-    if [[ "$DISTRIB" != "daily" ]] && [[ "$DISTRIB" != "unstable" ]] \
-    && [[ "$DISTRIB" != "test" ]] && [[ "$DISTRIB" != "testing" ]] ; then
-        apt_get_wrapper \
-            -o Dpkg::Options::="--force-confold" \
-            -y --force-yes install               \
-            yunohost yunohost-config             \
-            yunohost-config-postfix              \
-            postfix postfix-ldap                 \
-            postfix-policyd-spf-perl
-    else
-        apt_get_wrapper \
-            -o Dpkg::Options::="--force-confold" \
-            -y --force-yes install               \
-            yunohost postfix
-    fi
+    apt_get_wrapper \
+        -o Dpkg::Options::="--force-confold" \
+        -y --force-yes install               \
+        yunohost postfix
 }
 
 restart_services() {
