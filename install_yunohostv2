@@ -168,12 +168,13 @@ setup_package_source() {
         echo "deb http://repo.yunohost.org/ megusta main" > $CUSTOMAPT
     else
         # Check current system version and dependencies
-        [[ $(lsb_release -c | awk '{print $2}') == jessie ]] \
-          || (echo "Current testing release only works on Debian Jessie \
-            for the moment." && exit 1)
-        [ -d /run/systemd/system ] \
-          || (echo "Current testing release only works with systemd \
-            for the moment." && exit 1)
+        if [[ $(lsb_release -c | awk '{print $2}') != jessie ]]; then
+            echo "Current $DISTRIB only works on Debian Jessie for the moment."
+            return 1
+        elif [ ! -d /run/systemd/system ]; then
+            echo "Current $DISTRIB only works with systemd for the moment."
+            return 1
+        fi
 
         # Make use of new repository
         local CUSTOMDEB="deb http://repo.yunohost.org/debian/ jessie stable"
