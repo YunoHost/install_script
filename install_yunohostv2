@@ -164,15 +164,25 @@ Are you sure you want  to proceed with the installation of Yunohost?
 setup_package_source() {
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
-    # In any case we need the main stable repo
-    echo "deb http://repo.yunohost.org/ megusta main" > $CUSTOMAPT
+    if [[ "$DISTRIB" == "megusta" ]] || [[ "$DISTRIB" == "stable" ]] ; then
+        echo "deb http://repo.yunohost.org/ megusta main" > $CUSTOMAPT
+    else
+        # Check current system version and dependencies
+        [[ $(lsb_release -c | awk '{print $2}') == jessie ]] \
+          || (echo "Current testing release only works on Debian Jessie \
+            for the moment." && exit 1)
+        [ -d /run/systemd/system ] \
+          || (echo "Current testing release only works with systemd \
+            for the moment." && exit 1)
 
-    # Also add repositories for 'testing' and/or 'unstable' if the script has been called with those arguments
-    if [[ "$DISTRIB" == "test" ]] || [[ "$DISTRIB" == "testing" ]] ; then
-        echo "deb http://repo.yunohost.org/debian stable testing" >> $CUSTOMAPT
-    fi
-    if [[ "$DISTRIB" == "daily" ]] || [[ "$DISTRIB" == "unstable" ]] ; then
-        echo "deb http://repo.yunohost.org/debian stable testing unstable" > $CUSTOMAPT
+        # Make use of new repository
+        local CUSTOMDEB="deb http://repo.yunohost.org/debian/ jessie stable"
+
+        if [[ "$DISTRIB" == "test" ]] || [[ "$DISTRIB" == "testing" ]] ; then
+            echo "$CUSTOMDEB testing" >> $CUSTOMAPT
+        elif [[ "$DISTRIB" == "daily" ]] || [[ "$DISTRIB" == "unstable" ]] ; then
+            echo "$CUSTOMDEB testing unstable" > $CUSTOMAPT
+        fi
     fi
 
     # Add YunoHost repository key to the keyring
