@@ -21,7 +21,7 @@ find /var/log -type f -exec echo > {} \;
 echo "Purging apt ..."
 apt-get --purge clean
 echo "Removing myself ..."
-echo > /etc/udev/rules.d/70-persistent-net.rules
-update-rc.d -f yunohost-firstboot remove >/dev/null 2>&1
+insserv -r /etc/init.d/yunohost-firstboot
+rm -f /etc/init.d/yunohost-firstboot
 echo "Rebooting ..."
 reboot
