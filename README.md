@@ -20,7 +20,7 @@ Execute the script:
 
     $ bash install_yunohostv2
 
-If something goes wrong, you can check the installation logs saved in ```/var/log/yunohost.log```
+If something goes wrong, you can check the installation logs saved in ```/var/log/yunohost-installation.log```
 
 ## Advanced usage
 
