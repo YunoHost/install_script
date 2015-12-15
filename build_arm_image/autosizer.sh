@@ -1,6 +1,9 @@
 #!/bin/bash
 # Automatic Image file resizer
 # Written by SirLagz
+#
+# got from: http://sirlagz.net/2013/03/10/script-automatic-rpi-image-downsizer/
+
 strImgFile=$1
 
 if [[ ! $(whoami) =~ "root" ]]; then
@@ -12,20 +15,20 @@ if [[ ! $(whoami) =~ "root" ]]; then
     exit
 fi
 
-if [[ -z $1 ]]; then
+if [[ -z $strImgFile ]]; then
     echo "Usage: ./autosizer.sh <Image File>"
     exit
 fi
 
-if [[ ! -e $1 || ! $(file $1) =~ "x86" ]]; then
+if [[ ! -e $strImgFile || ! $(file $strImgFile) =~ "x86" ]]; then
     echo "Error : Not an image file, or file doesn't exist"
     exit
 fi
 
-partinfo=`parted -m $1 unit B print`
-partnumber=`echo "$partinfo" | grep ext4 | awk -F: ' { print $1 } '`
+partinfo=`parted -m $strImgFile unit B print`
+partnumber=`echo "$partinfo" | grep ext4 | awk -F: ' { print $strImgFile } '`
 partstart=`echo "$partinfo" | grep ext4 | awk -F: ' { print substr($2,0,length($2)-1) } '`
-loopback=`losetup -f --show -o $partstart $1`
+loopback=`losetup -f --show -o $partstart $strImgFile`
 e2fsck -f $loopback
 minsize=`resize2fs -P $loopback | awk -F': ' ' { print $2 } '`
 minsize=`echo $minsize+1000 | bc`
@@ -34,7 +37,8 @@ sleep 1
 losetup -d $loopback
 partnewsize=`echo "$minsize * 4096" | bc`
 newpartend=`echo "$partstart + $partnewsize" | bc`
-part1=`parted $1 rm 2`
-part2=`parted $1 unit B mkpart primary $partstart $newpartend`
-endresult=`parted -m $1 unit B print free | tail -1 | awk -F: ' { print substr($2,0,length($2)-1) } '`
-truncate -s $endresult $1
+# TODO: 2 is probably $partnumber
+part1=`parted $strImgFile rm 2`
+part2=`parted $strImgFile unit B mkpart primary $partstart $newpartend`
+endresult=`parted -m $strImgFile unit B print free | tail -1 | awk -F: ' { print substr($2,0,length($2)-1) } '`
+truncate -s $endresult $strImgFile
