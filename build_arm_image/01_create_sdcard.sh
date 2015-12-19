@@ -93,21 +93,24 @@ get_top_device() {
     echo "$device"
 }
 
-umount_all_partition() {
+umount_sdcard_partition() {
+    [[ -z "$SDCARD" ]] && { echo '$SDCARD is empty refusing to run'; return; }
     local p
     # search and replace all occurence of / by .
     local pattern=${SDCARD////.}
     pattern=${pattern/p[0-9]/}
     for p in $(df | awk "/^$pattern/ { print \$1 }")
     do
-        echo sudo umount $p
+        sudo umount $p
     done
     echo "done device for sdcard=${pattern//.//}"
 }
 
 dd_to_sdcard() {
-    # ensure
-    echo dd bs=16M if=_build_arm_steps/$DEBIAN_IMG of=$SDCARD
+    [[ -z "$SDCARD" ]] && { echo '$SDCARD is empty refusing to run'; return; }
+    # ensure that sdcard partitions are unmounted with umount_sdcard_partition
+    sudo dd bs=16M if=_build_arm_steps/$DEBIAN_IMG of=$SDCARD
+    sudo sync
 }
 
 test_all_tools() {
@@ -117,12 +120,51 @@ test_all_tools() {
     done
 }
 
+mount_loopback_img() {
+    [[ -z "$DEBIAN_IMG" ]] && { echo '$DEBIAN_IMG is empty refusing to run'; return; }
+    mkdir -p _build_arm_steps/mnt
+    local dev_loop0=$(sudo losetup -f --show _build_arm_steps/$DEBIAN_IMG)
+    local part_offset=$(sudo fdisk -l $dev_loop0 | awk '/Linux/ { print $2 }')
+    # mount the ext4 partition at computed offset
+    local dev_loop1=$(sudo losetup -f --show -o $((512 * $part_offset)) _build_arm_steps/$DEBIAN_IMG)
+    sudo mount $dev_loop1 _build_arm_steps/mnt/
+}
+
+umount_loopback_img() {
+    # find mounted loopback
+    local dev_loop1=$(mount | awk '/_build_arm_steps/ { print $1 }')
+    # compute loop n-1
+    local n=${dev_loop1#/dev/loop}
+    local dev_loop0="/dev/loop$(($n - 1))"
+    sudo umount _build_arm_steps/mnt
+    sudo losetup -d $dev_loop1
+    sudo losetup -d $dev_loop0
+}
+
+# copy a local key for ssh without password later
+add_ssh_key_to_img() {
+    mount_loopback_img
+    cd _build_arm_steps/mnt/home/pi/
+    mkdir .ssh
+    local ssh_key=$OLDPWD/_build_arm_steps/nopasskey
+    # silently generate an ssh-key pair
+    yes | ssh-keygen -q -t rsa -C "nopasskey-install" -N "" -f $ssh_key > /dev/null
+    cp ${ssh_key}.pub .ssh/authorized_keys
+    # remove some permissions
+    chmod -R go= .ssh/
+    # give to pi user id
+    sudo chown  -R --reference . .ssh
+    cd - > /dev/null
+    umount_loopback_img
+}
+
 # functions call in that order, edit remove a long running step if already done or if
 # you want to skip it, step states are saved in folder _build_arm_steps and skipped automatically.
 STEPS="
 sha_verify_zip 
 unzip_img
-umount_all_partition
+add_ssh_key_to_img
+umount_sdcard_partition
 dd_to_sdcard"
 
 # main wrapper, so the script can be sourced for debuging purpose or unittesting
@@ -142,7 +184,7 @@ main() {
     SDCARD=$(get_top_device "$2")
     [[ -z "$SDCARD" ]] && die "argument 2 error: expecting sdcard_device"
 
-    test_all_tools dd sync sudo
+    test_all_tools dd sync sudo losetup ssh-keygen
     mkdir -p _build_arm_steps
 
     # actions loop
@@ -159,4 +201,6 @@ if  [[ $sourced -eq 0 ]]
 then
     # pass positional argument as is
     main "$@"
+else
+    echo $STEPS
 fi
