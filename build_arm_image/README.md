@@ -1,4 +1,4 @@
-= Build your own yunohost image for Raspberry Pi =
+# Build your own yunohost image for Raspberry Pi
 
 This folder contains helper scripts to build an arm image for raspberry.
 The files here are for builder. They are not needed to install your yunohost.
@@ -6,28 +6,27 @@ The files here are for builder. They are not needed to install your yunohost.
 The folder structure maps debian OS folders, shell script here are helpers.
 Files in subfolders will be copied on the sdcard when installation is finished.
 
-== License ==
-
+## License
 All the content here is distributed under [GPLv3](http://www.gnu.org/licenses/gpl-3.0.txt).
 
-== See also ==
+## See also
 * https://yunohost.org/#/build_arm_image for building steps explanations
 * https://forum.yunohost.org/t/building-a-new-image-for-raspberry-debian-jessie-fr-en/1101/13 - discussion about building a new image for Raspberry Pi.
 
-== Files ==
+## Files
 
 Descriptions of the files available here.
 
-=== Run on PC ===
+### Run on PC
 
 Scripts are prefixed by a number which is an hint of the order they should be ran.
 
-==== autosizer.sh ==== 
+#### autosizer.sh
 
 Used on your PC to compact the dd image you will copy back after the rapsbian has been built.
 This script requier root privilege to run and modify the local sdcard image.
 
-==== 01_create_sdcard.sh ====
+#### 01_create_sdcard.sh
 
 Create a bootable image for raspbian. You have to download the .zip of the image.
 It embeds sudo call for using dd to copy the raw image to the sdcard. 
@@ -43,7 +42,7 @@ It takes some minutes to perform all the steps. Be patient.
 
 Use df or lsblk to find the name of your sdcard device. The script is taking care of umonting the partion if any. It also guess the disk's name if you give an partition's name instead of entire disk device's name.
 
-==== 02_install_yunohost.sh ====
+#### 02_install_yunohost.sh
 
 Should I say you have to plug the new sdcard freshly created and boot the Raspberry PI pluged on the same network as your PC?
 
@@ -69,7 +68,9 @@ Run:
 ./02_install_yunohost.sh 192.168.1.123
 ~~~
 
-=== Run on Raspberry ===
+### Run on Raspberry
+
+Will be handled by [02_install_yunohost.sh](https://github.com/Sylvain303/install_script/blob/master/build_arm_image/02_install_yunohost.sh)
 
 run the following script before shuting down your raspbian.
 
