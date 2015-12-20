@@ -30,7 +30,7 @@ This script requier root privilege to run and modify the local sdcard image.
 
 Create a bootable image for raspbian. You have to download the .zip of the image.
 It embeds sudo call for using dd to copy the raw image to the sdcard. 
-It will add an ssh key to pi default rasbian user in oder to connect later to continue automated installation. The pi user will be remonved at the end. The key-pair in generated only for you.
+It will add an ssh key to pi default rasbian user in oder to connect later to continue automated installation. The pi user will be remonved at the end. The key-pair is generated only for you.
 
 Usage:
 
@@ -40,7 +40,7 @@ Usage:
 
 It takes some minutes to perform all the steps. Be patient.
 
-Use df or lsblk to find the name of your sdcard device. The script is taking care of umonting the partion if any. It also guess the disk's name if you give an partition's name instead of entire disk device's name.
+Use `df` or `lsblk` to find the name of your sdcard device. The script is taking care of umonting the partion if any. It also guess the disk's name if you give an partition's name instead of entire disk device's name.
 
 #### 02_install_yunohost.sh
 
