@@ -2,21 +2,40 @@
 #
 # Usage: ./02_install_yunohost.sh DHCP_IP_ADDRESS_OF_RASPBERRYPI
 #
-# apply this doc: https://github.com/Sylvain304/doc/blob/master/build_arm_image.md
+# This script apply this doc: 
+# https://yunohost.org/#/build_arm_image
+#
+# Doc: See README.md
+#
+# STEPS:
+#  1. enlarge filesystem with raspi-config --expand-rootfs and reboot
+#  2. run install_yunohostv2 on the raspi
+#  3. install an yunohost-firstboot script and shutdown
 # 
 # Status: draft
 # Licence: GPLv3
 # Author: sylvain303@github
 
-# usefull wrapper to use ssh with our nopasskey
+# wrapper to use ssh with our nopasskey
+# Usage: sshpi "some remote commands"
 sshpi() {
     ssh -i _build_arm_steps/nopasskey pi@$PI_IP "$@"
 }
 
 # harcoded test IP
-PI_IP=192.168.1.50
+PI_IP=192.168.1.2
+# the installer script is used localy, no git clone else where.
 YUNOHOST_INSTALL=../install_yunohostv2
+# the folder on the raspberrypi, where script are uploaded
 YUNOHOST_REMOTE_DIR=/tmp/install_yunohost
+# dummy password
+PASSROOT='Free_money?yunomakeit'
+
+# wrapper to init with positional parameters
+init_param() {
+    PI_IP=$1
+    ask_root_pass
+}
 
 ask_root_pass() {
     echo "HINT: very good program to generate strong memorisable passwords: pwqgen"
@@ -46,9 +65,10 @@ scp_yunohost() {
         return 1
     fi
 
-    local script=$1
-    local scriptb=$(basename $script)
+    local script="$1"
+    local scriptb="$(basename $script)"
 
+    # no real scp, just wrap with sshpi
     cat "$script" | \
     sshpi "mkdir -p $YUNOHOST_REMOTE_DIR && \
         cat > $YUNOHOST_REMOTE_DIR/$scriptb && \
@@ -59,7 +79,7 @@ scp_yunohost() {
 # helper, compute common remote_step script name so they can be skiped by do_step
 make_step_file() {
     local step_name="$1"
-    local step_file=yuno_step_${step_name}.sh
+    local step_file="yuno_step_${step_name}.sh"
     echo $step_file
 }
 
@@ -68,13 +88,18 @@ make_step_file() {
 create_remote_script() {
     local step_file=$(make_step_file "$1")
     local actions="$2"
+    local dst="_build_arm_steps/$step_file"
 
-    echo '#!/bin/bash' > _build_arm_steps/$step_file
-    echo "$actions" >> _build_arm_steps/$step_file
-    scp_yunohost _build_arm_steps/$step_file
+    echo '#!/bin/bash' > $dst
+    echo "# $1" >> $dst
+    echo "$actions" >> $dst
+    scp_yunohost $dst
 
+    # the remote file on the raspi
     echo $YUNOHOST_REMOTE_DIR/$step_file
 }
+
+# ======================= ACTIONS - remote actions steps to be performed on the raspberrypi.
 
 init_sdcard_and_reboot() {
     local actions="
@@ -83,6 +108,7 @@ sudo sed -i -e '/\(en_US\|fr_FR\)\.UTF-8/ s/^# //' /etc/locale.gen
 sudo locale-gen
 # enlarge filesystem, we need more space to install yunohost
 sudo raspi-config --expand-rootfs
+echo 'rebooting raspberrypi…'
 sudo reboot
 "
     create_remote_script $FUNCNAME "$actions"
@@ -92,10 +118,10 @@ install_yunohostv2_on_sdcard() {
     local actions="
 # change root password
 echo 'root:$PASSROOT' | sudo chpasswd
+# some packages
 sudo apt-get -y install git
-# so you can hack your local copy of install_yunohost over and over…
-# run yunohost installer unattended (scp previously with scp_yunohost_installer)
 cat << ENDMSG
+!!!!!!!!!!!!!!!!!!!!!!! sdcard builder !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 Launching unattended install_yunohostv2 which will take some time to run…
 You can watch using a new ssh connection to the raspberrypi.
 By example issuing those commands:
@@ -103,7 +129,9 @@ By example issuing those commands:
  source 02_install_yunohost.sh
  sshpi
  tail -f /var/log/yunohost-installation.log
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ENDMSG
+# run yunohost installer unattended (scp previously with scp_yunohost)
 cd /tmp/install_yunohost && sudo ./install_yunohostv2 -a
 "
     create_remote_script $FUNCNAME "$actions"
@@ -111,18 +139,25 @@ cd /tmp/install_yunohost && sudo ./install_yunohostv2 -a
 
 finalize_yunohost() {
     local actions="
+# uploaded modified or new config files to the raspberrypi
 cd /
-tar xzf $YUNOHOST_REMOTE_DIR/etc.tzg
-chmod a+x /etc/init.d/yunohost-firstboot
-insserv /etc/init.d/yunohost-firstboot
+sudo tar xzf $YUNOHOST_REMOTE_DIR/etc.tgz
+# yunohost-firstboot is an helper to cleanup and resizefs with srinked sdcard
+# image
+sudo chmod a+x /etc/init.d/yunohost-firstboot
+sudo insserv /etc/init.d/yunohost-firstboot
 cat << ENDMSG
+=================================================================================
 We are going to shutdown the raspberrypi now.
 When it's done, the yunohost image is ready to be copied back on your comupter.
 * Unplug raspberrypi
 * remove the sdcard
-* Go to next step
+* Go to next step!
+=================================================================================
 ENDMSG
-shutdown
+# remove pi user, we will not be able to ssh connect anymore
+# sudo userdel pi
+sudo shutdown -h now
 "
     create_remote_script $FUNCNAME "$actions"
 }
@@ -132,7 +167,10 @@ reboot_pi() {
     sshpi "sudo reboot"
 }
 
-# helper simply visualy wait for raspberrypi to come up for ssh
+# ======================= END ACTIONS
+
+# helper, simply visualy wait for raspberrypi to come up for ssh
+# Usage: wait_raspberrypi || some_fail command
 wait_raspberrypi() {
     local max=30
     local n=1
@@ -140,7 +178,9 @@ wait_raspberrypi() {
     while [[ $n -le $max ]]
     do
         sleep 1
-        output=$(timeout 2 ssh -i _build_arm_steps/nopasskey pi@$PI_IP 'echo up' 2> /dev/null)
+        # remove redirect to /dev/null to debug
+        output=$(timeout 2 ssh -o "StrictHostKeyChecking=no" \
+            -i _build_arm_steps/nopasskey pi@$PI_IP 'echo up' 2> /dev/null)
         echo -n .
         if [[ "$output" == 'up' ]]
         then
@@ -162,33 +202,42 @@ wait_raspberrypi() {
     fi
 }
 
+# wrapper, execute a step script on the raspberrypi or skip it
+# Status: draft
 do_step() {
     local step=$1
     local step_file=$(make_step_file $step)
     local remote_step
     echo -n "$step: "
+    # skip if script already there
     if [[ -e "_build_arm_steps/$step_file" ]]
     then
         echo "SKIPED"
+        return 1
     else
         echo "RUNING"
         remote_step=$(eval $step)
         sshpi $remote_step
+        return 0
     fi
 }
 
+# main script code, wrapped inside a function, so the whole script can also be
+# sourced as a lib, for debug or unittesting purpose.
 main() {
     do_step init_sdcard_and_reboot
 
     wait_raspberrypi || return 1
 
-    do_step install_yunohostv2_on_sdcard
+    scp_yunohost $YUNOHOST_INSTALL
+    NEED_REBOOT=false
+    do_step install_yunohostv2_on_sdcard && { NEED_REBOOT=true; }
 
-    # copy the installation.log on the PC
+    # backup the installation.log on the PC
     sshpi "cat /var/log/yunohost-installation.log" > \
         _build_arm_steps/yunohost-installation.log 
 
-    reboot_pi
+    $NEED_REBOOT && reboot_pi
 
     wait_raspberrypi || return 1
 
@@ -197,3 +246,11 @@ main() {
     scp_yunohost _build_arm_steps/etc.tgz
     do_step finalize_yunohost
 }
+
+# sourcing code detection, if code is sourced for debug purpose, main is not executed.
+[[ $0 != "$BASH_SOURCE" ]] && sourced=1 || sourced=0
+if  [[ $sourced -eq 0 ]]
+then
+    # pass positional argument as is
+    main "$@"
+fi

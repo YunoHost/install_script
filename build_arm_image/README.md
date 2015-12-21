@@ -1,10 +1,10 @@
 # Build your own yunohost image for Raspberry Pi
 
-This folder contains helper scripts to build an arm image for raspberry.
+This folder contains helper scripts to build an arm image of yunohost for raspberry.
 The files here are for builder. They are not needed to install your yunohost.
 
-The folder structure maps debian OS folders, shell script here are helpers.
-Files in subfolders will be copied on the sdcard when installation is finished.
+The folder etc/ structure maps debian OS folders, shell script here are helpers.
+Files in etc/ subfolders will be copied on the sdcard when installation is finished.
 
 ## License
 All the content here is distributed under [GPLv3](http://www.gnu.org/licenses/gpl-3.0.txt).
@@ -15,7 +15,18 @@ All the content here is distributed under [GPLv3](http://www.gnu.org/licenses/gp
 
 ## Files
 
-Descriptions of the files available here.
+Description of the files available here.
+
+All step stripts are using your PC to store some files in the folder _build_arm_steps/.  This folder will be created by 01_create_sdcard.sh. You can wipe it, or remove selected script data form it, to redo a step.
+
+All step script are designed to run in this folder:
+
+~~~
+git clone this_repos
+cd path_to/build_arm_image/
+~~~
+
+then run steps scripts in order.
 
 ### Run on PC
 
@@ -28,9 +39,9 @@ This script requier root privilege to run and modify the local sdcard image.
 
 #### 01_create_sdcard.sh
 
-Create a bootable image for raspbian. You have to download the .zip of the image.
+Create a bootable image for raspbian. You have to download the .zip of the raspbian image.
 It embeds sudo call for using dd to copy the raw image to the sdcard. 
-It will add an ssh key to pi default rasbian user in oder to connect later to continue automated installation. The pi user will be remonved at the end. The key-pair is generated only for you.
+It will add an ssh key to pi default rasbian user in oder to connect later to continue automated installation. The pi user will be removed at the end. The ssh key-pair is generated only for you.
 
 Usage:
 
@@ -38,7 +49,7 @@ Usage:
 ./01_create_sdcard.sh image_rasbian.zip /dev/device_to_sdcard
 ~~~
 
-It takes some minutes to perform all the steps. Be patient.
+It takes some minutes to perform all the steps (~ 2m3.867s at last run). Be patient.
 
 Use `df` or `lsblk` to find the name of your sdcard device. The script is taking care of umonting the partion if any. It also guess the disk's name if you give an partition's name instead of entire disk device's name.
 

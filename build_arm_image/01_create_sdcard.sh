@@ -5,6 +5,8 @@
 # Usage:
 #  ./01_create_sdcard.sh downloaded_debian_image.zip /dev/sdcard_device
 #
+#
+# Status: functional
 # Licence: GPLv3
 # Author: sylvain303@github
 
@@ -46,7 +48,6 @@ skip_if() {
     return 1
 }
 
-
 sha_verify_zip() {
     local zip=$DEBIAN_IMG_ZIP
     local out=_build_arm_steps/sha_verify_zip
@@ -71,10 +72,10 @@ unzip_img() {
     DEBIAN_IMG=$(ls _build_arm_steps/ | grep \\.img$)
 }
 
-# helper try to guess top device name
+# helper, try to guess top device name
 # /dev/sdp2 => /dev/sdp
 # /dev/mmcblk0p1 => /dev/mmcblk0
-# just some regexp no smart thing
+# just some regexp, no smart thing
 get_top_device() {
     local device="$1"
     local regexp1='^/dev/sd[a-z]'
@@ -93,6 +94,7 @@ get_top_device() {
     echo "$device"
 }
 
+# helper, umount the sdcard partition if any
 umount_sdcard_partition() {
     [[ -z "$SDCARD" ]] && { echo '$SDCARD is empty refusing to run'; return; }
     local p
@@ -120,6 +122,7 @@ test_all_tools() {
     done
 }
 
+# mount the .img so we can write on it before copying on the sdcard
 mount_loopback_img() {
     [[ -z "$DEBIAN_IMG" ]] && { echo '$DEBIAN_IMG is empty refusing to run'; return; }
     mkdir -p _build_arm_steps/mnt
@@ -142,6 +145,7 @@ umount_loopback_img() {
 }
 
 # copy a local key for ssh without password later
+# having an ssh-key pair to remote connect on the raspi will be used by the next step
 add_ssh_key_to_img() {
     mount_loopback_img
     cd _build_arm_steps/mnt/home/pi/
@@ -202,5 +206,6 @@ then
     # pass positional argument as is
     main "$@"
 else
+    # just print STEPS so I can copy/paste to call them interactivly
     echo $STEPS
 fi
