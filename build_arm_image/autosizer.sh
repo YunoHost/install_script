@@ -3,6 +3,8 @@
 # Written by SirLagz
 #
 # got from: http://sirlagz.net/2013/03/10/script-automatic-rpi-image-downsizer/
+#
+# Usage: sudo autosizer.sh sdcard.img
 
 strImgFile=$1
 
