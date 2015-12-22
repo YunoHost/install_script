@@ -50,9 +50,9 @@ Usage:
 
 It takes some minutes to perform all the steps (~ 2m3.867s at last run). Be patient.
 
-Use `df` or `lsblk` to find the name of your sdcard device. The script is taking care of umonting the partition if any. It also guesses the disk's name if you give an partition's name instead of entire disk device's name.
+Use `df` or `lsblk` to find the name of your sdcard device. The script is taking care of umonting the partition if any. It also guesses the disk's name if you gave a partition's name instead of entire disk device's name.
 
-Be carefull not to wipe the wrong device!
+BE CAREFULL not to wipe the wrong device!
 
 #### 02_install_yunohost.sh
 
@@ -77,6 +77,16 @@ Or what ever your DHCP is giving…
 Run:
 
 ~~~bash
+./02_install_yunohost.sh 192.168.1.123
+~~~
+
+This step is quite long. It took ~24min on my Raspberry. Be patient, A message will be displayed on the screen to explain how you can watch it if you want.
+
+If you got ssh `Host key verification failed.`, fix it then:
+
+~~~bash
+rm _build_arm_steps/yuno_step*
+# retry
 ./02_install_yunohost.sh 192.168.1.123
 ~~~
 
