@@ -4,6 +4,7 @@
 #
 # Usage:
 #  ./01_create_sdcard.sh downloaded_debian_image.zip /dev/sdcard_device
+#  ./01_create_sdcard.sh generated_yunohost.img /dev/sdcard_device
 #
 #
 # Status: functional
@@ -50,6 +51,9 @@ skip_if() {
 
 sha_verify_zip() {
     local zip=$DEBIAN_IMG_ZIP
+
+    [[ -z "$zip" ]] && { echo "no zip refuse to run"; return 3; }
+
     local out=_build_arm_steps/sha_verify_zip
     skip_if $out && return 2
     sha1sum $zip > $out
@@ -57,19 +61,20 @@ sha_verify_zip() {
     local sha="$(sed -e 's/\(^[a-f0-9]\+\).*/\1/' $out)"
     if [[ "$sha" != "$SHA_DEBIAN_IMG_ZIP" ]]
     then
-        echo "NOK: '$sha' != '$SHA_DEBIAN_IMG_ZIP'"
-        exit 1
+        die "NOK: '$sha' != '$SHA_DEBIAN_IMG_ZIP'"
     fi
 }
 
 # unzip raspbian image in the cache folder
 unzip_img() {
-    if ! skip_if _build_arm_steps/*.img
+    local img_filename=$(unzip -l $DEBIAN_IMG_ZIP | awk '/\.img$/ { print $4 }')
+    if ! skip_if _build_arm_steps/$img_filename
     then
         unzip -o $DEBIAN_IMG_ZIP -d _build_arm_steps
     fi
+
     # get extrated image filename from zip file
-    DEBIAN_IMG=$(ls _build_arm_steps/ | grep \\.img$)
+    DEBIAN_IMG="_build_arm_steps/$img_filename"
 }
 
 # helper, try to guess top device name
@@ -111,7 +116,8 @@ umount_sdcard_partition() {
 dd_to_sdcard() {
     [[ -z "$SDCARD" ]] && { echo '$SDCARD is empty refusing to run'; return; }
     # ensure that sdcard partitions are unmounted with umount_sdcard_partition
-    sudo dd bs=16M if=_build_arm_steps/$DEBIAN_IMG of=$SDCARD
+    echo "starting dd it will take some times…"
+    sudo dd bs=16M if="$DEBIAN_IMG" of=$SDCARD
     sudo sync
 }
 
@@ -126,10 +132,10 @@ test_all_tools() {
 mount_loopback_img() {
     [[ -z "$DEBIAN_IMG" ]] && { echo '$DEBIAN_IMG is empty refusing to run'; return; }
     mkdir -p _build_arm_steps/mnt
-    local dev_loop0=$(sudo losetup -f --show _build_arm_steps/$DEBIAN_IMG)
+    local dev_loop0=$(sudo losetup -f --show "$DEBIAN_IMG")
     local part_offset=$(sudo fdisk -l $dev_loop0 | awk '/Linux/ { print $2 }')
     # mount the ext4 partition at computed offset
-    local dev_loop1=$(sudo losetup -f --show -o $((512 * $part_offset)) _build_arm_steps/$DEBIAN_IMG)
+    local dev_loop1=$(sudo losetup -f --show -o $((512 * $part_offset)) "$DEBIAN_IMG")
     sudo mount $dev_loop1 _build_arm_steps/mnt/
 }
 
@@ -158,14 +164,17 @@ add_ssh_key_to_img() {
     chmod -R go= .ssh/
     # give to pi user id
     sudo chown  -R --reference . .ssh
+    # return to working folder
     cd - > /dev/null
     umount_loopback_img
+    echo "ssh-key added"
 }
 
 # functions call in that order, edit remove a long running step if already done or if
 # you want to skip it, step states are saved in folder _build_arm_steps and skipped automatically.
+# STEPS is modifiy in main() if argument1 is an .img and not a .zip
 STEPS="
-sha_verify_zip 
+sha_verify_zip
 unzip_img
 add_ssh_key_to_img
 umount_sdcard_partition
@@ -177,14 +186,27 @@ main() {
     # init
     if [[ -z "$1" ]]
     then
-        echo "argument 1 error: expecting raspbian image file.zip"
+        echo "argument 1 error: expecting raspbian image file.zip or an img"
         echo "can be downloaded here: $DOWNLOAD_URL"
         exit 1
     fi
 
+    local regexp='\.img$'
+
     # reading script argument
     DEBIAN_IMG_ZIP=$1
-    [[ -f "$DEBIAN_IMG_ZIP" ]] || die "error raspbian image not found: '$DEBIAN_IMG_ZIP'"
+    if [[ "$1" =~ $regexp ]]
+    then
+        DEBIAN_IMG="$1"
+        DEBIAN_IMG_ZIP=""
+        # write image verbatim without modification
+        STEPS="
+        umount_sdcard_partition
+        dd_to_sdcard"
+    else
+        [[ -f "$DEBIAN_IMG_ZIP" ]] || die "error raspbian image not found: '$DEBIAN_IMG_ZIP'"
+    fi
+
     SDCARD=$(get_top_device "$2")
     [[ -z "$SDCARD" ]] && die "argument 2 error: expecting sdcard_device"
 

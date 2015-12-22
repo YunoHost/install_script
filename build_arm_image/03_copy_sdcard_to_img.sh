@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 #
 # Create the image file from the sdcard
 #
@@ -26,18 +26,6 @@ test_tool() {
     else
         die "tool missing: $cmd"
     fi
-}
-
-# skip if the file exists.
-# usage: skip_if _build_arm_steps/somefile && return 2
-skip_if() {
-    if [[ -e "$1" ]]
-    then
-        echo "cached"
-        return 0
-    fi
-   # echo -n "continue for $1"
-    return 1
 }
 
 # helper, try to guess top device name
@@ -95,34 +83,15 @@ test_all_tools() {
     done
 }
 
-# mount the .img so we can write on it before copying on the sdcard
-mount_loopback_img() {
-    [[ -z "$OUTPUT_IMG" ]] && { echo '$OUTPUT_IMG is empty refusing to run'; return; }
-    [[ ! -d _build_arm_steps/mnt ]] && mkdir _build_arm_steps/mnt
-    local dev_loop0=$(sudo losetup -f --show _build_arm_steps/$OUTPUT_IMG)
-    local part_offset=$(sudo fdisk -l $dev_loop0 | awk '/Linux/ { print $2 }')
-    # mount the ext4 partition at computed offset
-    local dev_loop1=$(sudo losetup -f --show -o $((512 * $part_offset)) _build_arm_steps/$OUTPUT_IMG)
-    sudo mount $dev_loop1 _build_arm_steps/mnt/
-}
-
-umount_loopback_img() {
-    # find mounted loopback
-    local dev_loop1=$(mount | awk '/_build_arm_steps/ { print $1 }')
-    # compute loop n-1
-    local n=${dev_loop1#/dev/loop}
-    local dev_loop0="/dev/loop$(($n - 1))"
-    sudo umount _build_arm_steps/mnt
-    sudo losetup -d $dev_loop1
-    sudo losetup -d $dev_loop0
-}
-
+# debug, not used
 mount_sdcard_data_partition() {
     local part_data=2
     [[ ! -d _build_arm_steps/sdcard ]] && mkdir _build_arm_steps/sdcard
     sudo mount ${SDCARD}p2 _build_arm_steps/sdcard
 }
 
+# prototype, not used. Wanna test if I can d.d only used part of the partion, and fix it back on the PC
+# not working yet, may be not achieved anyway…
 get_used_partition_size() {
     local start_offset=$(sudo fdisk -l /dev/mmcblk0 | awk '/Linux/ { print $2 * 512 }')
     local used=$(df -B1 _build_arm_steps/sdcard | awk '/dev.mmcblk0p2/ { print $3 }')

@@ -2,9 +2,6 @@
 #
 # Usage: ./02_install_yunohost.sh DHCP_IP_ADDRESS_OF_RASPBERRYPI
 #
-# This script apply this doc: 
-# https://yunohost.org/#/build_arm_image
-#
 # Doc: See README.md
 #
 # STEPS:
@@ -12,7 +9,7 @@
 #  2. run install_yunohostv2 on the raspi
 #  3. install an yunohost-firstboot script and shutdown
 # 
-# Status: draft
+# Status: functional
 # Licence: GPLv3
 # Author: sylvain303@github
 
@@ -22,7 +19,7 @@ sshpi() {
     ssh -i _build_arm_steps/nopasskey pi@$PI_IP "$@"
 }
 
-# harcoded test IP
+# harcoded test IP, you can change for yours for debuging. See main()
 PI_IP=192.168.1.2
 # the installer script is used localy, no git clone else where.
 YUNOHOST_INSTALL=../install_yunohostv2
@@ -31,12 +28,7 @@ YUNOHOST_REMOTE_DIR=/tmp/install_yunohost
 # dummy password
 PASSROOT='Free_money?yunomakeit'
 
-# wrapper to init with positional parameters
-init_param() {
-    PI_IP=$1
-    ask_root_pass
-}
-
+# used by main() See at the end.
 ask_root_pass() {
     echo "HINT: very good program to generate strong memorisable passwords: pwqgen"
     echo "HINT: sudo apt-get install passwdqc"
@@ -225,6 +217,10 @@ do_step() {
 # main script code, wrapped inside a function, so the whole script can also be
 # sourced as a lib, for debug or unittesting purpose.
 main() {
+    # you can comment the 2 lines, for debuging. Fix PI_IP with your dhcp IP.
+    PI_IP=$1
+    ask_root_pass
+
     do_step init_sdcard_and_reboot
 
     wait_raspberrypi || return 1
