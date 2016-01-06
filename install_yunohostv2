@@ -134,6 +134,9 @@ EOF
 }
 
 set_domain() {
+    # No amavis in testing/unstable anymore
+    [[ "$DISTRIB" != "stable" ]] && return 0
+    
     dpkg -l | grep amavisd-new | grep -e "^ii" > /dev/null 2>&1 \
       || [[ "$(hostname -d 2>/dev/null)" != "" ]] \
       || hostname yunohost.yunohost.org > /dev/null 2>&1 \
