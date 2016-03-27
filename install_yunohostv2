@@ -95,10 +95,17 @@ upgrade_system() {
 }
 
 installscript_dependencies() {
-    # install dependencies of the install script itself
+    # dependencies of the install script itself
+    local DEPENDENCIES="lsb-release wget whiptail"
+
+    if [[ "$AUTOMODE" == "0" ]] ;
+    then
+        DEPENDENCIES+=" dialog"
+    fi
+
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
                     -y --force-yes install               \
-                    lsb-release wget whiptail            \
+                    $DEPENDENCIES                        \
       || return 1
 }
 
