@@ -22,7 +22,7 @@ if [[ -z $strImgFile ]]; then
     exit
 fi
 
-if [[ ! -e $strImgFile || ! $(file $strImgFile) =~ "x86" ]]; then
+if [[ ! -e $strImgFile || ! $(file $strImgFile) =~ "DOS/MBR boot sector" ]]; then
     echo "Error : Not an image file, or file doesn't exist"
     exit
 fi
