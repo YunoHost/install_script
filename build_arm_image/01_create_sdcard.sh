@@ -1,15 +1,23 @@
 #!/bin/bash 
 #
-# Create the sdcard on your PC with the latest debian.
+# Create the sdcard on your PC with the latest debian raspbian.
 #
 # Usage:
-#  ./01_create_sdcard.sh downloaded_debian_image.zip /dev/sdcard_device
+#  ./01_create_sdcad.sh downloaded_debian_image.zip /dev/sdcard_device
 #  ./01_create_sdcard.sh generated_yunohost.img /dev/sdcard_device
 #
+# HowTo:
+#  find your sdcard device: 
+#     mount it first graphicaly
+#     next issue a df -h look for something "/dev/mmcblk0p1"
+#  create a totally new image:
+#     delete _build_arm_steps/ which is the cache folder.
+#     follows steps in README.md
 #
 # Status: functional
 # Licence: GPLv3
 # Author: sylvain303@github
+# SeeAlso: 
 
 # informations about Raspbian image:
 # Raspbian Jessie Lite Version: November 2015 Release date: 2015-11-21
@@ -17,8 +25,11 @@
 # Kernel version: 4.1
 # http://downloads.raspberrypi.org/raspbian/release_notes.txt
 
+
+# DOWNLOAD_URL used only for echo a message
+# SHA_DEBIAN_IMG_ZIP need to be updated to match your image
 DOWNLOAD_URL=https://www.raspberrypi.org/downloads/raspbian/
-SHA_DEBIAN_IMG_ZIP=97888fcd9bfbbae2a359b0f1d199850852bf0104
+SHA_DEBIAN_IMG_ZIP="b78bb50bdac5ec8c108f34104f788e214ac23635"
 
 die() {
     echo "$*"
