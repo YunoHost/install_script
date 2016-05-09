@@ -115,28 +115,6 @@ create_custom_config() {
 
     # Store info about installation method
     touch /etc/yunohost/from_script
-
-    # Create default configuration if not already there
-    if [[ ! -f /etc/yunohost/yunohost.conf ]]
-    then
-        cat << EOF > /etc/yunohost/yunohost.conf
-# Yunohost custom config
-# If you want to keep a custom service configuration replace "no" by "yes"
-# for the concerned service
-
-amavis=no
-avahi=no
-dovecot=no
-iptables=no
-metronome=no
-mysql=no
-nginx=no
-postfix=no
-slapd=no
-ssh=yes
-ssowat=no
-EOF
-    fi
 }
 
 confirm_installation() {
