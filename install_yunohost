@@ -153,9 +153,9 @@ setup_package_source() {
 
     if [[ "$DISTRIB" == "stable" ]] ; then
         echo "$CUSTOMDEB" > $CUSTOMAPT
-    elif [[ "$DISTRIB" == "test" ]] || [[ "$DISTRIB" == "testing" ]] ; then
+    elif [[ "$DISTRIB" == "testing" ]] ; then
         echo "$CUSTOMDEB testing" > $CUSTOMAPT
-    elif [[ "$DISTRIB" == "daily" ]] || [[ "$DISTRIB" == "unstable" ]] ; then
+    elif [[ "$DISTRIB" == "unstable" ]] ; then
         echo "$CUSTOMDEB testing unstable" > $CUSTOMAPT
     fi
 
