@@ -2,9 +2,9 @@
 
 ## Context
 
-The scripts in this repository will install [YunoHost](https://yunohost.org/) on a Debian system.
+The script `install_yunohost` will install [YunoHost](https://yunohost.org/) on a Debian system.
 
-Only Debian 7 (aka wheezy) and 8 (aka jessie) are supported.
+Only Debian 8 (aka Jessie) systems running with [systemd](https://wiki.debian.org/systemd) - which is generally the default - are supported.
 
 ## Basic usage
 
