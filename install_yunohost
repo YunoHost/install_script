@@ -152,9 +152,9 @@ setup_package_source() {
     local CUSTOMDEB="deb http://repo.yunohost.org/debian/ jessie stable"
 
     if [[ "$DISTRIB" == "stable" ]] ; then
-        echo "$CUSTOMDEB" >> $CUSTOMAPT
+        echo "$CUSTOMDEB" > $CUSTOMAPT
     elif [[ "$DISTRIB" == "test" ]] || [[ "$DISTRIB" == "testing" ]] ; then
-        echo "$CUSTOMDEB testing" >> $CUSTOMAPT
+        echo "$CUSTOMDEB testing" > $CUSTOMAPT
     elif [[ "$DISTRIB" == "daily" ]] || [[ "$DISTRIB" == "unstable" ]] ; then
         echo "$CUSTOMDEB testing unstable" > $CUSTOMAPT
     fi
