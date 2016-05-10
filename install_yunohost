@@ -1,1 +1,403 @@
-install_yunohostv2
+#!/bin/bash
+
+# Copyright (C) 2015 kload, beudbeud
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+YUNOHOST_LOG="/var/log/yunohost-installation.log"
+
+print() {
+    printf "%s\n" "$*";
+}
+
+notify_about_install_logs() {
+    print "
+Installation logs are located in $YUNOHOST_LOG
+" 1>&2
+
+}
+
+success() {
+    tput setf 2
+    print "Success !"
+    tput sgr 0
+    notify_about_install_logs
+}
+
+die() {
+    # Print to log file
+    print "
+Failure !
+The following error was caught during Yunohost installation :
+
+$1
+" >> $YUNOHOST_LOG
+
+    # Print to terminal
+    tput setf 4
+    print "Failure !"
+    tput sgr 0
+
+    print "\
+The following error was caught during YunoHost installation :
+
+$1
+" 1>&2
+
+    notify_about_install_logs
+    exit "${2:-1}"
+}
+
+step() {
+  printf "[ $(date --rfc-3339=seconds) ] ----- [ entering %-30s ]\n" "$1" >> $YUNOHOST_LOG
+  $*
+  local return_code="$?"
+  return $return_code
+}
+
+ensure_root() {
+    if [[ "$(id -u)" != "0" ]] ;
+    then
+        return 1
+    fi
+    return 0
+}
+
+apt_get_wrapper() {
+    if [[ "$AUTOMODE" == "0" ]] ;
+    then
+      debconf-apt-progress                             \
+          --logfile $YUNOHOST_LOG                      \
+          --                                           \
+          apt-get $*
+    else
+        apt-get $* >> $YUNOHOST_LOG 2>&1
+    fi
+}
+
+upgrade_system() {
+  apt_get_wrapper update \
+    || return 1
+
+  apt_get_wrapper -y dist-upgrade \
+    || return 2
+}
+
+installscript_dependencies() {
+    # dependencies of the install script itself
+    local DEPENDENCIES="lsb-release wget whiptail"
+
+    if [[ "$AUTOMODE" == "0" ]] ;
+    then
+        DEPENDENCIES+=" dialog"
+    fi
+
+    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
+                    -y --force-yes install               \
+                    $DEPENDENCIES                        \
+      || return 1
+}
+
+create_custom_config() {
+    # Create YunoHost configuration folder
+    mkdir -p /etc/yunohost/
+
+    # Store info about installation method
+    touch /etc/yunohost/from_script
+}
+
+confirm_installation() {
+  [[ "$AUTOMODE" == "1" ]] && return 0
+
+  local text="
+Caution !
+
+Your configuration files for :
+  - postfix
+  - dovecot
+  - mysql
+  - nginx
+  - metronome
+will be overwritten !
+
+Are you sure you want  to proceed with the installation of Yunohost?
+"
+  whiptail --title "Yunohost Installation" --yesno "$text" 20 78
+}
+
+setup_package_source() {
+    local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
+
+    # Check current system version and dependencies
+    if [[ $(lsb_release -c | awk '{print $2}') != jessie ]]; then
+        echo "Current $DISTRIB only works on Debian Jessie for the moment."
+        return 1
+    elif [ ! -d /run/systemd/system ]; then
+        echo "Current $DISTRIB only works with systemd for the moment."
+        return 1
+    fi
+
+    # Debian repository
+    local CUSTOMDEB="deb http://repo.yunohost.org/debian/ jessie stable"
+
+    if [[ "$DISTRIB" == "stable" ]] ; then
+        echo "$CUSTOMDEB" > $CUSTOMAPT
+    elif [[ "$DISTRIB" == "testing" ]] ; then
+        echo "$CUSTOMDEB testing" > $CUSTOMAPT
+    elif [[ "$DISTRIB" == "unstable" ]] ; then
+        echo "$CUSTOMDEB testing unstable" > $CUSTOMAPT
+    fi
+
+    # Add YunoHost repository key to the keyring
+    wget -O- http://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq > /dev/null
+}
+
+apt_update() {
+    apt_get_wrapper update
+}
+
+register_debconf() {
+    debconf-set-selections << EOF 
+slapd slapd/password1 password yunohost
+slapd slapd/password2 password yunohost
+slapd slapd/domain    string yunohost.org
+slapd shared/organization     string yunohost.org
+slapd	slapd/allow_ldap_v2	boolean	false
+slapd	slapd/invalid_config	boolean	true
+slapd	slapd/backend	select	MDB
+postfix postfix/main_mailer_type        select Internet Site
+postfix postfix/mailname string /etc/mailname
+mysql-server-5.5 mysql-server/root_password password yunohost
+mysql-server-5.5 mysql-server/root_password_again password yunohost
+mariadb-server-10.0 mysql-server/root_password password yunohost
+mariadb-server-10.0 mysql-server/root_password_again password yunohost
+nslcd	nslcd/ldap-bindpw	password
+nslcd	nslcd/ldap-starttls	boolean	false
+nslcd	nslcd/ldap-reqcert	select
+nslcd	nslcd/ldap-uris	string	ldap://localhost/
+nslcd	nslcd/ldap-binddn	string
+nslcd	nslcd/ldap-base	string	dc=yunohost,dc=org
+libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
+EOF
+}
+
+workaround_avahi_installation() {
+
+    # When attempting several installation of Yunohost on the same host
+    # with a light VM system like LXC
+    # we hit a bug with avahi-daemon postinstallation
+    # This is described in detail in https://github.com/lxc/lxc/issues/25
+    #
+    # It makes the configure step of avahi-daemon fail, because the service does
+    # start correctly. Then all other packages depending on avahi-daemon refuse to
+    # configure themselves.
+    #
+    # The workaround we use is to generate a random uid for the avahi user, and
+    # create the user with this id beforehand, so that the avahi-daemon postinst
+    # script does not do it on its own. Our randomized uid has far less chances to
+    # be already in use in another system than the automated one (which tries to use
+    # consecutive uids).
+
+    # Return without error if avahi already exists
+    if id avahi > /dev/null 2>&1 ; then
+        print "User avahi already exists (with uid $(id avahi)), skipping avahi workaround" >> $YUNOHOST_LOG
+        return 0
+    fi
+
+    # Get a random unused uid between 500 and 999 (system-user)
+    local avahi_id=$((500 + RANDOM % 500))
+    while cut -d ':' -f 3 /etc/passwd | grep -q $avahi_id ;
+    do
+        avahi_id=$((500 + RANDOM % 500))
+    done
+
+    print "Workaround for avahi : creating avahi user with uid $avahi_id" >> $YUNOHOST_LOG
+
+    # Use the same adduser parameter as in the avahi-daemon postinst script
+    # Just specify --uid explicitely
+    adduser --disabled-password  --quiet --system     \
+        --home /var/run/avahi-daemon --no-create-home \
+        --gecos "Avahi mDNS daemon" --group avahi     \
+        --uid $avahi_id
+}
+
+install_yunohost_packages() {
+    # Allow sudo removal even if no root password has been set (on some DO
+    # droplet or Vagrant virtual machines), as YunoHost use sudo-ldap
+    export SUDO_FORCE_REMOVE=yes
+
+    # Install YunoHost
+    apt_get_wrapper \
+        -o Dpkg::Options::="--force-confold" \
+        -y --force-yes install               \
+        yunohost postfix
+}
+
+restart_services() {
+    service slapd restart
+#    service yunohost-firewall start
+    service nscd restart
+    service nslcd restart
+
+    # NOTE : We don't fail if slapd fails to restart...
+    return 0
+}
+
+post_install() {
+    # No postinstall in auto mode
+    [[ "$AUTOMODE" == "1" ]] && return 0
+
+    # Remove whiptail and dialog remains...
+    clear
+
+    local text="
+Yunohost packages have been installed successfully!
+
+You can now proceed with Yunohost post-installation.
+This is where you will be asked for :
+- the main DNS domain name of your server
+- the administration password
+
+You can also perform this step later on your own :
+- either from a shell, by running 'yunohost tools postinstall'
+  as root
+- either from your web browser, by accessing https://yunohost.local
+
+Please refer to https://yunohost.org/#/postinstall
+for additionnal information.
+
+Do you want to proceed with YunoHost post-installation now?
+"
+    whiptail --title "Post-installation" --yesno "$text" 25 78 \
+        || return 0
+
+    /usr/bin/yunohost tools postinstall
+
+    local POSTINSTALL_EXIT_CODE="$?"
+    while [[ "$POSTINSTALL_EXIT_CODE" != "0" ]] ;
+    do
+        local text_retry="
+Yunohost post-installation has failed.
+
+Do you want to try again now?
+"
+        whiptail --title "Post-installation" --yesno "$text_retry" 12 78 --defaultno \
+            || return $POSTINSTALL_EXIT_CODE
+
+        /usr/bin/yunohost tools postinstall
+        POSTINSTALL_EXIT_CODE="$?"
+    done
+    return 0
+}
+
+usage() {
+  print "
+Usage :
+  `basename $0` [-a] [-d <DISTRIB>] [-h]
+
+Options :
+  -a      Enable automatic mode. No questions are asked.
+          This does not perform the post-install step.
+  -d      Choose the distribution to install ('stable', 'testing', 'unstable').
+          Defaults to 'stable'
+  -h      Prints this help and exit
+"
+}
+
+# Treat unset variables as an error when performing
+# parameter expansion. An error message will be written
+# to the standard error, and a non-interactive shell will exit.
+set -u
+
+AUTOMODE=0
+DISTRIB=stable
+while getopts ":ad:h" option; do
+  case $option in
+    a)
+      AUTOMODE=1
+      export DEBIAN_FRONTEND=noninteractive
+      ;;
+    d)
+      DISTRIB=$OPTARG
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    :)
+      usage
+      exit 1
+      ;;
+    \?)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if ! step ensure_root ; then
+  die "This script must be run as root" 1
+fi
+
+if ! step upgrade_system ; then
+  die "Unable to update the system" 2
+fi
+
+if ! step installscript_dependencies ; then
+  die "Unable to install dependencies to install script" 3
+fi
+
+if ! step create_custom_config ; then
+  die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 4
+fi
+
+# if ! step set_domain ; then
+#   die "Setting hostname failed" 5
+# fi
+
+if ! step confirm_installation ; then
+  die "Installation cancelled at your request" 6
+fi
+
+if ! step setup_package_source ; then
+  die "Setting up deb package sources failed" 7
+fi
+
+if ! step apt_update ; then
+  die "Error caught during 'apt-get update'" 8
+fi
+
+if ! step register_debconf ; then
+  die "Unable to insert new values into debconf database" 9
+fi
+
+if ! step workaround_avahi_installation ; then
+  die "Unable to install workaround for avahi installation" 10
+fi
+
+if ! step install_yunohost_packages ; then
+  die "Installation of Yunohost packages failed" 11
+fi
+
+if ! step restart_services ; then
+  die "Error caught during services restart" 12
+fi
+
+if ! step post_install ; then
+  die "Post-installation failed" 13
+fi
+
+# Success !
+success
+exit 0

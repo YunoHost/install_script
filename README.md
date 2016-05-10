@@ -14,11 +14,11 @@ Go into a temporary folder, e.g. ```/tmp```:
 
 Get the install script:
 
-    $ wget https://raw.githubusercontent.com/YunoHost/install_script/master/install_yunohostv2
+    $ wget https://raw.githubusercontent.com/YunoHost/install_script/master/install_yunohost
 
 Execute the script:
 
-    $ bash install_yunohostv2
+    $ bash install_yunohost
 
 If something goes wrong, you can check the installation logs saved in ```/var/log/yunohost-installation.log```
 
@@ -26,9 +26,9 @@ If something goes wrong, you can check the installation logs saved in ```/var/lo
 
 The script supports a number of positional arguments:
 
-    $ bash install_yunohostv2 -h
+    $ bash install_yunohost -h
     Usage :
-      install_yunohostv2 [-a] [-d <DISTRIB>] [-h]
+      install_yunohost [-a] [-d <DISTRIB>] [-h]
 
     Options :
       -a      Enable automatic mode. No questions are asked.
