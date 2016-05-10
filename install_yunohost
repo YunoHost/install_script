@@ -233,6 +233,11 @@ workaround_avahi_installation() {
 }
 
 install_yunohost_packages() {
+    # Allow sudo removal even if no root password has been set (on some DO
+    # droplet or Vagrant virtual machines), as YunoHost use sudo-ldap
+    export SUDO_FORCE_REMOVE=yes
+
+    # Install YunoHost
     apt_get_wrapper \
         -o Dpkg::Options::="--force-confold" \
         -y --force-yes install               \
