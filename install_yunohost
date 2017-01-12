@@ -513,6 +513,11 @@ if [[ "$BUILD_IMAGE" == "1" ]] ; then
     fi
 fi
 
+if is_raspbian ; then
+    # Reboot should be done before postinstall to be able to run iptables rules
+    reboot
+fi
+
 if ! step post_install ; then
   die "Post-installation failed" 13 
 fi
@@ -520,9 +525,4 @@ fi
 
 # Success !
 success
-
-if is_raspbian ; then
-    reboot
-fi
-
 exit 0
