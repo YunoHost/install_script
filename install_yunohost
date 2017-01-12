@@ -101,10 +101,6 @@ apt_get_wrapper() {
 }
 
 upgrade_system() {
-    if is_raspbian ; then
-        # https://github.com/RPi-Distro/raspberrypi-sys-mods/issues/6#issuecomment-254902333
-        sed -i 's/frontend=pager/frontend=text/' /etc/apt/listchanges.conf
-    fi
 
     apt_get_wrapper update \
     || return 1
@@ -120,7 +116,6 @@ upgrade_system() {
         rpi-update \
         || return 4
 
-        sed -i 's/frontend=text/frontend=pager/' /etc/apt/listchanges.conf
     fi
 }
 
