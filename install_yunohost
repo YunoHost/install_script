@@ -113,7 +113,7 @@ upgrade_system() {
                         -y --force-yes install rpi-update \
         || return 3
         
-        rpi-update \
+        rpi-update >> $YUNOHOST_LOG 2>&1 \
         || return 4
 
     fi
@@ -139,10 +139,14 @@ installscript_dependencies() {
                         -y --force-yes install               \
                         $DEPENDENCIES                        \
         || return 1
-        wget -q https://raw.githubusercontent.com/likeitneverwentaway/rpi_buildbot/master/metronome_3.7.9+33b7572-1_armhf.deb
-        sha256sum -c <<<"d19c6b08afb8674d1257dc3349a60e88218c4c01133c53c1fdcb02e86b415a40  metronome_3.7.9+33b7572-1_armhf.deb"
-        dpkg -i metronome_3.7.9+33b7572-1_armhf.deb
-        apt-mark hold metronome
+        wget -q https://raw.githubusercontent.com/likeitneverwentaway/rpi_buildbot/master/metronome_3.7.9+33b7572-1_armhf.deb \
+        || return 1
+        sha256sum -c <<<"d19c6b08afb8674d1257dc3349a60e88218c4c01133c53c1fdcb02e86b415a40  metronome_3.7.9+33b7572-1_armhf.deb" \
+        || return 1
+        dpkg -i metronome_3.7.9+33b7572-1_armhf.deb >> $YUNOHOST_LOG 2>&1 \
+        || return 1
+        apt-mark hold metronome >> $YUNOHOST_LOG 2>&1 \
+        || return 1
     fi
 
 }
@@ -293,7 +297,7 @@ restart_services() {
 }
 
 del_user_pi() {
-    deluser --remove-all-files pi
+    deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
 }
 
 change_hostname() {
@@ -329,18 +333,18 @@ EOF
 }
 
 clean_image() {
-    echo "Generating new ssh keys ..."
     # Delete SSH keys
-    rm -f /etc/ssh/ssh_host_*
-    yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa
-    yes | ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
-    yes | ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa -b 521
-    echo "Deleting logs ..."
-    find /var/log -type f -exec rm {} \;
-    echo "Purging apt ..."
-    apt-get --purge clean
+    rm -f /etc/ssh/ssh_host_* >> $YUNOHOST_LOG 2>&1
+    yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa >> $YUNOHOST_LOG 2>&1
+    yes | ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa >> $YUNOHOST_LOG 2>&1
+    yes | ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa -b 521 >> $YUNOHOST_LOG 2>&1
+    
+    # Deleting logs ...
+    find /var/log -type f -exec rm {} \; >> $YUNOHOST_LOG 2>&1
+    
+    # Purging apt ...
+    apt-get --purge clean >> $YUNOHOST_LOG 2>&1
 }
-
 
 post_install() {
     # No postinstall in auto mode
