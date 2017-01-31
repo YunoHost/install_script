@@ -316,7 +316,7 @@ setup_firstboot() {
 # Default-Start: 2 3 4 5
 # Default-Stop:
 # Short-Description: Generates new ssh host keys on first boot
-# Description: Generatesapt-get --purge clean new ssh host keys on $
+# Description: Generates apt-get --purge clean new ssh host keys on $
 ### END INIT INFO
 echo "Expanding rootfs ..."
 raspi-config --expand-rootfs
