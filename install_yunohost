@@ -139,7 +139,7 @@ installscript_dependencies() {
                         -y --force-yes install               \
                         $DEPENDENCIES                        \
         || return 1
-        wget -q https://raw.githubusercontent.com/likeitneverwentaway/rpi_buildbot/master/metronome_3.7.9+33b7572-1_armhf.deb \
+        wget -q https://build.yunohost.org/metronome_3.7.9+33b7572-1_armhf.deb \
         || return 1
         sha256sum -c <<<"d19c6b08afb8674d1257dc3349a60e88218c4c01133c53c1fdcb02e86b415a40  metronome_3.7.9+33b7572-1_armhf.deb" \
         || return 1
