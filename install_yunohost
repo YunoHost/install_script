@@ -134,7 +134,7 @@ installscript_dependencies() {
       || return 1
     
     if is_raspbian ; then
-        DEPENDENCIES="ssl-cert lua-event lua-expat lua-socket lua-sec lua-filesystem"
+        DEPENDENCIES="ssl-cert lua-event lua-expat lua-socket lua-sec lua-filesystem apt-transport-https"
         apt_get_wrapper -o Dpkg::Options::="--force-confold" \
                         -y --force-yes install               \
                         $DEPENDENCIES                        \
