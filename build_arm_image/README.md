@@ -146,3 +146,7 @@ Enjoy!
 
 Used on your PC to compact the dd image you will copy back after the rapsbian has been built.
 This script requier root privilege to run and modify the local sdcard image.
+
+
+## See also
+* https://github.com/likeitneverwentaway/rpi_buildbot
