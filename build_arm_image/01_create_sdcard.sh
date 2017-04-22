@@ -3,7 +3,7 @@
 # Create the sdcard on your PC with the latest debian raspbian.
 #
 # Usage:
-#  ./01_create_sdcad.sh downloaded_debian_image.zip /dev/sdcard_device
+#  ./01_create_sdcard.sh downloaded_debian_image.zip /dev/sdcard_device
 #  ./01_create_sdcard.sh generated_yunohost.img /dev/sdcard_device
 #
 # HowTo:
@@ -29,7 +29,7 @@
 # DOWNLOAD_URL used only for echo a message
 # SHA_DEBIAN_IMG_ZIP need to be updated to match your image
 DOWNLOAD_URL=https://www.raspberrypi.org/downloads/raspbian/
-SHA_DEBIAN_IMG_ZIP="b78bb50bdac5ec8c108f34104f788e214ac23635"
+SHA_DEBIAN_IMG_ZIP="6741a30d674d39246302a791f1b7b2b0c50ef9b7"
 
 die() {
     echo "$*"
