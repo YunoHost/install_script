@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Installation script YunoHost</title>
+    <meta name="description" content="Installation script for YunoHost">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+      
+      pre code {
+        display: block;
+        background: #eee;
+        padding: 1em;
+      }
+      pre code:before {
+        content: "$ ";
+        display: inline;
+      }
+    </style>
+  </head>
+  <body>
+
+    <h1>YunoHost installation scripts</h1>
+
+    <section>
+      <h2>Context</h2>
+
+      <p>The script <code>install_yunohost</code> will install <a href="https://yunohost.org/">YunoHost</a> on a Debian system.</p>
+      <p>Only Debian 8 (aka Jessie) systems running with <a href="https://wiki.debian.org/systemd">systemd</a> - which is generally the default - are supported.</p>
+    </section>
+
+    <section>
+      <h2>Basic usage</h2>
+
+      <p>Go into a temporary folder, e.g. <code>/tmp</code>:</p>
+      <pre><code>cd /tmp</code></pre>
+      <p>Get the install script:</p>
+      <pre><code>wget https://install.yunohost.org/install_yunohost</code></pre>
+      <p>Execute the script:</p>
+      <pre><code>bash install_yunohost</code></pre>
+      <p>If something goes wrong, you can check the installation logs saved in <code>/var/log/yunohost-installation.log</code></p>
+    </section>
+
+    <section>
+      <h2>Advanced usage</h2>
+
+      <p>The script supports a number of positional arguments:</p>
+      <pre><code>bash install_yunohost -h
+      Usage :
+        install_yunohost [-a] [-d &lt;DISTRIB&gt;] [-h]
+
+      Options :
+        -a      Enable automatic mode. No questions are asked.
+                This does not perform the post-install step.
+        -d      Choose the distribution to install ('stable', 'testing', 'unstable').
+                Defaults to 'stable'
+        -h      Prints this help and exit
+      </code></pre>
+      <p>By specifying <code>-a</code>, the installation will be performed without asking any question.
+      This is useful for fully automated headless installations.
+      The <a href="https://yunohost.org/#/postinstall">post-installation</a> will need to be performed later.</p>
+      <p>The <code>-d &lt;DISTRIB&gt;</code> switch is mostly for advanced users who want to install the bleeding edge versions of YunoHost packages.</p>
+    </section>
+
+    <section>
+      <h2>Issues, Feedback</h2>
+
+      <p>Please report issues here : <a href="https://dev.yunohost.org/projects/yunohost/issues">https://dev.yunohost.org/projects/yunohost/issues</a></p>
+    </section>
+
+  </body>
+</html>
+
