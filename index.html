@@ -11,11 +11,38 @@
       body {
         max-width: 50em;
         margin: auto;
+        color: #111;
+      }
+      ::-moz-selection { background: deeppink; color: white; }
+      ::selection { background: deeppink; color: white; }
+
+      a {
+        color: deeppink;
+        text-decoration: none;
+      }
+      a:hover,
+      a:focus {
+        text-decoration: underline;
+      }
+
+      section {
+        margin: 2em 0;
+      }
+
+      section h2 {
+        font-family: sans-serif;
+        line-height: 1.4;
+        border-bottom: 1px solid #ddd;
+      }
+
+      code {
+        display: inline-block;
+        background: #eee;
+        padding: 0.15em;
       }
 
       pre code {
         display: block;
-        background: #eee;
         padding: 1em;
       }
       pre code:before {
