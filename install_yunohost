@@ -284,6 +284,19 @@ install_yunohost_packages() {
         -o Dpkg::Options::="--force-confold" \
         -y --force-yes install               \
         yunohost yunohost-admin postfix
+        
+    # Install archivemount if fuse is present already
+    # (We do this because we cannot risk installing fuse ourselves because 
+    # install fails on some OpenVZ setups...
+    # see https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=743360 )
+    if [ -e /dev/fuse ];
+    then
+        apt_get_wrapper \
+            -o Dpkg::Options::="--force-confold" \
+            -y --force-yes install               \
+            archivemount
+    fi
+    
 }
 
 restart_services() {
