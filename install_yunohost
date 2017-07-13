@@ -278,6 +278,10 @@ install_yunohost_packages() {
     # Allow sudo removal even if no root password has been set (on some DO
     # droplet or Vagrant virtual machines), as YunoHost use sudo-ldap
     export SUDO_FORCE_REMOVE=yes
+    
+    # On some machines (e.g. OVH VPS), the /etc/resolv.conf is immutable
+    # We need to make it mutable for the resolvconf dependency to be installed
+    chattr -i /etc/resolv.conf 2>/dev/null || true
 
     # Install YunoHost
     apt_get_wrapper \
