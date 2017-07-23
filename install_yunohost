@@ -181,13 +181,15 @@ Are you sure you want  to proceed with the installation of Yunohost?
 setup_package_source() {
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
-    # Check current system version and dependencies
-    if [[ $(lsb_release -c | awk '{print $2}') != jessie ]]; then
-        echo "Current $DISTRIB only works on Debian Jessie for the moment."
-        return 1
-    elif [ ! -d /run/systemd/system ]; then
-        echo "Current $DISTRIB only works with systemd for the moment."
-        return 1
+    if [ "${FORCE}" == 0 ]; then
+        # Check current system version and dependencies
+        if [[ $(lsb_release -c | awk '{print $2}') != jessie ]]; then
+            echo "Current $DISTRIB only works on Debian Jessie for the moment."
+            return 1
+        elif [ ! -d /run/systemd/system ]; then
+            echo "Current $DISTRIB only works with systemd for the moment."
+            return 1
+        fi
     fi
 
     # Debian repository
@@ -419,7 +421,8 @@ set -u
 AUTOMODE=0
 DISTRIB=stable
 BUILD_IMAGE=0
-while getopts ":aid:h" option; do
+FORCE=0
+while getopts ":aifd:h" option; do
   case $option in
     a)
       AUTOMODE=1
@@ -431,6 +434,10 @@ while getopts ":aid:h" option; do
     i)
       # This hidden option will allow to build generic image for Rpi/Olimex
       BUILD_IMAGE=1
+      ;;
+    f)
+      # Force installation (aka I know that I do) 
+      FORCE=1
       ;;
     h)
       usage
