@@ -185,7 +185,7 @@ setup_package_source() {
     if [[ $(lsb_release -c | awk '{print $2}') != jessie ]]; then
         echo "Current $DISTRIB only works on Debian Jessie for the moment."
         return 1
-    elif [ ! -d /run/systemd/system ]; then
+    elif ! command -v systemctl > /dev/null ; then
         echo "Current $DISTRIB only works with systemd for the moment."
         return 1
     fi
@@ -202,7 +202,7 @@ setup_package_source() {
     fi
 
     # Add YunoHost repository key to the keyring
-    wget -O- https://repo.yunohost.org/yunohost.asc -q | apt-key add - -qq > /dev/null
+    wget -O- https://repo.yunohost.org/yunohost.asc -q | apt-key add -qq - > /dev/null
 }
 
 apt_update() {
