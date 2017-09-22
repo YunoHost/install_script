@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 YUNOHOST_LOG="/var/log/yunohost-installation.log"
+THIS_MACHINE_RELEASE="$(lsb_release -c | awk '{print $2}')"
 
 print() {
     printf "%s\n" "$*";
@@ -182,8 +183,9 @@ setup_package_source() {
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
     # Check current system version and dependencies
-    if [[ $(lsb_release -c | awk '{print $2}') != jessie ]]; then
-        echo "Current $DISTRIB only works on Debian Jessie for the moment."
+
+    if [[ $THIS_MACHINE_RELEASE =~ ^jessie|stretch$ ]]; then
+        echo "Current $DISTRIB only works on Debian Jessie or Stretch for the moment."
         return 1
     elif ! command -v systemctl > /dev/null ; then
         echo "Current $DISTRIB only works with systemd for the moment."
