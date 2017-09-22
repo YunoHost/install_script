@@ -207,7 +207,7 @@ setup_package_source() {
 
     # Add YunoHost repository key to the keyring
     # FIXME : move "vinaigrette." to "repo." at some point...
-    wget -O- https://vinaigrette.yunohost.org/yunohost.asc -q | apt-key add -qq - > /dev/null
+    wget -O- https://vinaigrette.yunohost.org/yunohost.asc -q | apt-key add -qq - >/dev/null 2>&1
 }
 
 apt_update() {
