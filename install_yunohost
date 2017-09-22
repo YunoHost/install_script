@@ -184,7 +184,7 @@ setup_package_source() {
 
     # Check current system version and dependencies
 
-    if [[ $THIS_MACHINE_RELEASE =~ ^jessie|stretch$ ]]; then
+    if [[ ! $THIS_MACHINE_RELEASE =~ ^jessie|stretch$ ]]; then
         echo "Current $DISTRIB only works on Debian Jessie or Stretch for the moment."
         return 1
     elif ! command -v systemctl > /dev/null ; then
