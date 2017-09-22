@@ -193,7 +193,9 @@ setup_package_source() {
     fi
 
     # Debian repository
-    local CUSTOMDEB="deb http://repo.yunohost.org/debian/ jessie stable"
+
+    # FIXME : move "vinaigrette." to "repo." at some point...
+    local CUSTOMDEB="deb http://vinaigrette.yunohost.org/debian/ stretch stable testing unstable"
 
     if [[ "$DISTRIB" == "stable" ]] ; then
         echo "$CUSTOMDEB" > $CUSTOMAPT
@@ -204,7 +206,8 @@ setup_package_source() {
     fi
 
     # Add YunoHost repository key to the keyring
-    wget -O- https://repo.yunohost.org/yunohost.asc -q | apt-key add -qq - > /dev/null
+    # FIXME : move "vinaigrette." to "repo." at some point...
+    wget -O- https://vinaigrette.yunohost.org/yunohost.asc -q | apt-key add -qq - > /dev/null
 }
 
 apt_update() {
