@@ -121,7 +121,7 @@ upgrade_system() {
 
 installscript_dependencies() {
     # dependencies of the install script itself
-    local DEPENDENCIES="lsb-release wget whiptail"
+    local DEPENDENCIES="lsb-release wget whiptail apt-transport-https"
 
     if [[ "$AUTOMODE" == "0" ]] ;
     then
@@ -134,7 +134,7 @@ installscript_dependencies() {
       || return 1
     
     if is_raspbian ; then
-        DEPENDENCIES="ssl-cert lua-event lua-expat lua-socket lua-sec lua-filesystem apt-transport-https"
+        DEPENDENCIES="ssl-cert lua-event lua-expat lua-socket lua-sec lua-filesystem"
         apt_get_wrapper -o Dpkg::Options::="--force-confold" \
                         -y --force-yes install               \
                         $DEPENDENCIES                        \
