@@ -155,7 +155,7 @@ Your configuration files for :
   - dovecot
   - mysql
   - nginx
-  - metronome
+  - prosody
 will be overwritten !
 
 Are you sure you want  to proceed with the installation of Yunohost?
@@ -188,6 +188,10 @@ setup_package_source() {
 
     # Add YunoHost repository key to the keyring
     wget -O- https://repo.yunohost.org/yunohost.asc -q | apt-key add -qq - > /dev/null
+
+    # Add Prosody repository source and key
+    echo "deb http://packages.prosody.im/debian jessie main" > "/etc/apt/sources.list.d/prosody.list"
+    wget -O- https://prosody.im/files/prosody-debian-packages.key | apt-key add -qq - > /dev/null
 }
 
 apt_update() {
