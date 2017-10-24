@@ -133,21 +133,6 @@ installscript_dependencies() {
                     $DEPENDENCIES                        \
       || return 1
     
-    if is_raspbian ; then
-        DEPENDENCIES="ssl-cert lua-event lua-expat lua-socket lua-sec lua-filesystem"
-        apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                        -y --force-yes install               \
-                        $DEPENDENCIES                        \
-        || return 1
-        wget -q https://build.yunohost.org/metronome_3.7.9+33b7572-1_armhf.deb \
-        || return 1
-        sha256sum -c <<<"d19c6b08afb8674d1257dc3349a60e88218c4c01133c53c1fdcb02e86b415a40  metronome_3.7.9+33b7572-1_armhf.deb" \
-        || return 1
-        dpkg -i metronome_3.7.9+33b7572-1_armhf.deb >> $YUNOHOST_LOG 2>&1 \
-        || return 1
-        apt-mark hold metronome >> $YUNOHOST_LOG 2>&1 \
-        || return 1
-    fi
 
 }
 
