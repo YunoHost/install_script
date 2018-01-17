@@ -298,7 +298,7 @@ install_yunohost_packages() {
 restart_services() {
     service slapd restart
 #    service yunohost-firewall start
-    service nscd restart
+    service unscd restart
     service nslcd restart
 
     # NOTE : We don't fail if slapd fails to restart...
