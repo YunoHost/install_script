@@ -1,0 +1,27 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides: expand rootfs and Generates new ssh host keys on first boot
+# Required-Start: $remote_fs $syslog
+# Required-Stop: $remote_fs $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop:
+# Short-Description: Generates new ssh host keys on first boot
+# Description: Generatesapt-get --purge clean new ssh host keys on $
+### END INIT INFO
+echo "Expanding rootfs ..."
+raspi-config --expand-rootfs
+echo "Generating new ssh keys ..."
+# Delete SSH keys
+rm -f /etc/ssh/ssh_host_*
+yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa
+yes | ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
+yes | ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa -b 521
+echo "Deleting logs ..."
+find /var/log -type f -exec echo > {} \;
+echo "Purging apt ..."
+apt-get --purge clean
+echo "Removing myself ..."
+insserv -r /etc/init.d/yunohost-firstboot
+rm -f /etc/init.d/yunohost-firstboot
+echo "Rebooting ..."
+reboot

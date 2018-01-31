@@ -1,5 +1,7 @@
 # YunoHost installation scripts
 
+Forked version: some discussion available [here](https://forum.yunohost.org/t/building-a-new-image-for-raspberry-debian-jessie-fr-en/1101)
+
 ## Context
 
 The script `install_yunohost` will install [YunoHost](https://yunohost.org/) on a Debian system.
