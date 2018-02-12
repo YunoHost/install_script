@@ -79,11 +79,7 @@ function main()
 {
     parse_options
 
-    step ensure_root || die "This script must be run as root"
-
-    if is_raspbian ; then
-        step ensure_pi_logout || die "The user pi should be logged out"
-    fi
+    check_assertions
 
     step upgrade_system                || die "Unable to update the system"
     step installscript_dependencies    || die "Unable to install dependencies to install script"
@@ -178,7 +174,7 @@ function ensure_root() {
     return 0
 }
 
-function ensure_pi_logout() {
+function user_pi_logged_out() {
     who | grep pi > /dev/null && return 1
     return 0
 }
@@ -195,6 +191,31 @@ function is_raspbian() {
 ###############################################################################
 # Installation steps                                                          #
 ###############################################################################
+
+function check_assertions()
+{
+    # Assert we're on Debian
+    # Note : we do not rely on lsb_release to avoid installing a dependency
+    # only to check this...
+    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian."
+
+    # Assert we're on Stretch
+    # Note : we do not rely on lsb_release to avoid installing a dependency
+    # only to check this...
+    [[ ! "$(cat /etc/debian_version)" =~ ^9.* ]] || die "This script can only be ran on Debian Stretch."
+
+    # Assert we're root
+    [[ "$(id -u)" != "0" ]] || die "This script must be run as root."
+
+    # Assert systemd is installed
+    command -v systemctl > /dev/null || die "YunoHost requires systemd to be installed."
+
+    # If we're on Raspbian, we want the user 'pi' to be logged out because
+    # it's going to be deleted for security reasons...
+    if is_raspbian ; then
+        user_pi_logged_out || die "The user pi should be logged out."
+    fi
+}
 
 function apt_get_wrapper() {
     if [[ "$AUTOMODE" == "0" ]] ;
@@ -215,12 +236,12 @@ function upgrade_system() {
 
     apt_get_wrapper -y dist-upgrade \
     || return 2
-    
+
     if is_raspbian ; then
         apt_get_wrapper -o Dpkg::Options::="--force-confold" \
                         -y --force-yes install rpi-update \
         || return 3
-        
+
         rpi-update >> $YUNOHOST_LOG 2>&1 \
         || return 4
 
@@ -270,17 +291,8 @@ Are you sure you want  to proceed with the installation of Yunohost?
 }
 
 function setup_package_source() {
+
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
-
-    # Check current system version and dependencies
-
-    if [[ ! $THIS_MACHINE_RELEASE =~ ^jessie|stretch$ ]]; then
-        echo "Current $DISTRIB only works on Debian Jessie or Stretch for the moment."
-        return 1
-    elif ! command -v systemctl > /dev/null ; then
-        echo "Current $DISTRIB only works with systemd for the moment."
-        return 1
-    fi
 
     # Debian repository
 
@@ -305,7 +317,7 @@ function apt_update() {
 }
 
 function register_debconf() {
-    debconf-set-selections << EOF 
+    debconf-set-selections << EOF
 slapd slapd/password1 password yunohost
 slapd slapd/password2 password yunohost
 slapd slapd/domain    string yunohost.org
@@ -373,7 +385,7 @@ function install_yunohost_packages() {
     # Allow sudo removal even if no root password has been set (on some DO
     # droplet or Vagrant virtual machines), as YunoHost use sudo-ldap
     export SUDO_FORCE_REMOVE=yes
-    
+
     # On some machines (e.g. OVH VPS), the /etc/resolv.conf is immutable
     # We need to make it mutable for the resolvconf dependency to be installed
     chattr -i /etc/resolv.conf 2>/dev/null || true
@@ -432,10 +444,10 @@ function clean_image() {
     yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa >> $YUNOHOST_LOG 2>&1
     yes | ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa >> $YUNOHOST_LOG 2>&1
     yes | ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa -b 521 >> $YUNOHOST_LOG 2>&1
-    
+
     # Deleting logs ...
     find /var/log -type f -exec rm {} \; >> $YUNOHOST_LOG 2>&1
-    
+
     # Purging apt ...
     apt-get --purge clean >> $YUNOHOST_LOG 2>&1
 }
