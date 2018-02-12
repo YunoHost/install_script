@@ -18,25 +18,25 @@
 YUNOHOST_LOG="/var/log/yunohost-installation.log"
 THIS_MACHINE_RELEASE="$(lsb_release -c | awk '{print $2}')"
 
-print() {
+function print() {
     printf "%s\n" "$*";
 }
 
-notify_about_install_logs() {
+function notify_about_install_logs() {
     print "
 Installation logs are located in $YUNOHOST_LOG
 " 1>&2
 
 }
 
-success() {
+function success() {
     tput setf 2
     print "Success !"
     tput sgr 0
     notify_about_install_logs
 }
 
-die() {
+function die() {
     # Print to log file
     print "
 Failure !
@@ -60,14 +60,14 @@ $1
     exit "${2:-1}"
 }
 
-step() {
+function step() {
   printf "[ $(date --rfc-3339=seconds) ] ----- [ entering %-30s ]\n" "$1" >> $YUNOHOST_LOG
   $*
   local return_code="$?"
   return $return_code
 }
 
-ensure_root() {
+function ensure_root() {
     if [[ "$(id -u)" != "0" ]] ;
     then
         return 1
@@ -75,12 +75,12 @@ ensure_root() {
     return 0
 }
 
-ensure_pi_logout() {
+function ensure_pi_logout() {
     who | grep pi > /dev/null && return 1
     return 0
 }
 
-is_raspbian() {
+function is_raspbian() {
     # On Raspbian image lsb_release is available
     if [[ "$(lsb_release -i -s 2> /dev/null)" != "Raspbian" ]] ;
     then
@@ -89,7 +89,7 @@ is_raspbian() {
     return 0
 }
 
-apt_get_wrapper() {
+function apt_get_wrapper() {
     if [[ "$AUTOMODE" == "0" ]] ;
     then
       debconf-apt-progress                             \
@@ -101,7 +101,7 @@ apt_get_wrapper() {
     fi
 }
 
-upgrade_system() {
+function upgrade_system() {
 
     apt_get_wrapper update \
     || return 1
@@ -120,7 +120,7 @@ upgrade_system() {
     fi
 }
 
-installscript_dependencies() {
+function installscript_dependencies() {
     # dependencies of the install script itself
     local DEPENDENCIES="lsb-release wget whiptail"
 
@@ -156,7 +156,7 @@ installscript_dependencies() {
 
 }
 
-create_custom_config() {
+function create_custom_config() {
     # Create YunoHost configuration folder
     mkdir -p /etc/yunohost/
 
@@ -164,7 +164,7 @@ create_custom_config() {
     touch /etc/yunohost/from_script
 }
 
-confirm_installation() {
+function confirm_installation() {
   [[ "$AUTOMODE" == "1" ]] && return 0
 
   local text="
@@ -183,7 +183,7 @@ Are you sure you want  to proceed with the installation of Yunohost?
   whiptail --title "Yunohost Installation" --yesno "$text" 20 78
 }
 
-setup_package_source() {
+function setup_package_source() {
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
     # Check current system version and dependencies
@@ -214,11 +214,11 @@ setup_package_source() {
     wget -O- https://vinaigrette.yunohost.org/yunohost.asc -q | apt-key add -qq - >/dev/null 2>&1
 }
 
-apt_update() {
+function apt_update() {
     apt_get_wrapper update
 }
 
-register_debconf() {
+function register_debconf() {
     debconf-set-selections << EOF 
 slapd slapd/password1 password yunohost
 slapd slapd/password2 password yunohost
@@ -243,7 +243,7 @@ libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
 EOF
 }
 
-workaround_avahi_installation() {
+function workaround_avahi_installation() {
 
     # When attempting several installation of Yunohost on the same host
     # with a light VM system like LXC
@@ -283,7 +283,7 @@ workaround_avahi_installation() {
         --uid $avahi_id
 }
 
-install_yunohost_packages() {
+function install_yunohost_packages() {
     # Allow sudo removal even if no root password has been set (on some DO
     # droplet or Vagrant virtual machines), as YunoHost use sudo-ldap
     export SUDO_FORCE_REMOVE=yes
@@ -299,7 +299,7 @@ install_yunohost_packages() {
         yunohost yunohost-admin postfix
 }
 
-restart_services() {
+function restart_services() {
     service slapd restart
 #    service yunohost-firewall start
     service unscd restart
@@ -309,16 +309,16 @@ restart_services() {
     return 0
 }
 
-del_user_pi() {
+function del_user_pi() {
     deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
 }
 
-change_hostname() {
+function change_hostname() {
     sed -i 's/raspberrypi/yunohost/g' /etc/hosts
     sed -i 's/raspberrypi/yunohost/g' /etc/hostname
 }
 
-setup_firstboot() {
+function setup_firstboot() {
 
     cat > /etc/init.d/yunohost-firstboot << EOF
 #!/bin/sh
@@ -345,7 +345,7 @@ EOF
     touch /etc/yunohost/firstboot
 }
 
-clean_image() {
+function clean_image() {
     # Delete SSH keys
     rm -f /etc/ssh/ssh_host_* >> $YUNOHOST_LOG 2>&1
     yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa >> $YUNOHOST_LOG 2>&1
@@ -359,7 +359,7 @@ clean_image() {
     apt-get --purge clean >> $YUNOHOST_LOG 2>&1
 }
 
-post_install() {
+function post_install() {
     # No postinstall in auto mode
     [[ "$AUTOMODE" == "1" ]] && return 0
 
@@ -406,7 +406,7 @@ Do you want to try again now?
     return 0
 }
 
-usage() {
+function usage() {
   print "
 Usage :
   `basename $0` [-a] [-d <DISTRIB>] [-h]
