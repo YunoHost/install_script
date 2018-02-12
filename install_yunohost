@@ -166,26 +166,21 @@ function step() {
   return $return_code
 }
 
-function ensure_root() {
-    if [[ "$(id -u)" != "0" ]] ;
+function apt_get_wrapper() {
+    if [[ "$AUTOMODE" == "0" ]] ;
     then
-        return 1
+      debconf-apt-progress                             \
+          --logfile $YUNOHOST_LOG                      \
+          --                                           \
+          apt-get $*
+    else
+        apt-get $* >> $YUNOHOST_LOG 2>&1
     fi
-    return 0
 }
 
-function user_pi_logged_out() {
-    who | grep pi > /dev/null && return 1
-    return 0
-}
 
-function is_raspbian() {
-    # On Raspbian image lsb_release is available
-    if [[ "$(lsb_release -i -s 2> /dev/null)" != "Raspbian" ]] ;
-    then
-        return 1
-    fi
-    return 0
+function apt_update() {
+    apt_get_wrapper update
 }
 
 ###############################################################################
@@ -214,18 +209,6 @@ function check_assertions()
     # it's going to be deleted for security reasons...
     if is_raspbian ; then
         user_pi_logged_out || die "The user pi should be logged out."
-    fi
-}
-
-function apt_get_wrapper() {
-    if [[ "$AUTOMODE" == "0" ]] ;
-    then
-      debconf-apt-progress                             \
-          --logfile $YUNOHOST_LOG                      \
-          --                                           \
-          apt-get $*
-    else
-        apt-get $* >> $YUNOHOST_LOG 2>&1
     fi
 }
 
@@ -310,10 +293,6 @@ function setup_package_source() {
     # Add YunoHost repository key to the keyring
     # FIXME : move "vinaigrette." to "repo." at some point...
     wget -O- https://vinaigrette.yunohost.org/yunohost.asc -q | apt-key add -qq - >/dev/null 2>&1
-}
-
-function apt_update() {
-    apt_get_wrapper update
 }
 
 function register_debconf() {
@@ -407,51 +386,6 @@ function restart_services() {
     return 0
 }
 
-function del_user_pi() {
-    deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
-}
-
-function setup_firstboot() {
-
-    cat > /etc/init.d/yunohost-firstboot << EOF
-#!/bin/sh
-### BEGIN INIT INFO
-# Provides: expand rootfs and Generates new ssh host keys on first boot
-# Required-Start: \$remote_fs \$syslog
-# Required-Stop: \$remote_fs \$syslog
-# Default-Start: 2 3 4 5
-# Default-Stop:
-# Short-Description: Generates new ssh host keys on first boot
-# Description: Generates apt-get --purge clean new ssh host keys on $
-### END INIT INFO
-echo "Expanding rootfs ..."
-raspi-config --expand-rootfs
-echo "Removing myself ..."
-insserv -r /etc/init.d/yunohost-firstboot
-rm -f /etc/init.d/yunohost-firstboot
-rm /etc/yunohost/firstboot
-echo "Rebooting ..."
-reboot
-EOF
-    chmod a+x /etc/init.d/yunohost-firstboot
-    insserv /etc/init.d/yunohost-firstboot
-    touch /etc/yunohost/firstboot
-}
-
-function clean_image() {
-    # Delete SSH keys
-    rm -f /etc/ssh/ssh_host_* >> $YUNOHOST_LOG 2>&1
-    yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa >> $YUNOHOST_LOG 2>&1
-    yes | ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa >> $YUNOHOST_LOG 2>&1
-    yes | ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa -b 521 >> $YUNOHOST_LOG 2>&1
-
-    # Deleting logs ...
-    find /var/log -type f -exec rm {} \; >> $YUNOHOST_LOG 2>&1
-
-    # Purging apt ...
-    apt-get --purge clean >> $YUNOHOST_LOG 2>&1
-}
-
 function post_install() {
     # No postinstall in auto mode
     [[ "$AUTOMODE" == "1" ]] && return 0
@@ -498,5 +432,75 @@ Do you want to try again now?
     done
     return 0
 }
+
+###############################################################################
+# Raspbian specific stuff                                                     #
+###############################################################################
+
+function is_raspbian() {
+    # On Raspbian image lsb_release is available
+    if [[ "$(lsb_release -i -s 2> /dev/null)" != "Raspbian" ]] ;
+    then
+        return 1
+    fi
+    return 0
+}
+
+function user_pi_logged_out() {
+    who | grep pi > /dev/null && return 1
+    return 0
+}
+
+function del_user_pi() {
+    deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
+}
+
+function setup_firstboot() {
+
+    cat > /etc/init.d/yunohost-firstboot << EOF
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides: expand rootfs and Generates new ssh host keys on first boot
+# Required-Start: \$remote_fs \$syslog
+# Required-Stop: \$remote_fs \$syslog
+# Default-Start: 2 3 4 5
+# Default-Stop:
+# Short-Description: Generates new ssh host keys on first boot
+# Description: Generates apt-get --purge clean new ssh host keys on $
+### END INIT INFO
+echo "Expanding rootfs ..."
+raspi-config --expand-rootfs
+echo "Removing myself ..."
+insserv -r /etc/init.d/yunohost-firstboot
+rm -f /etc/init.d/yunohost-firstboot
+rm /etc/yunohost/firstboot
+echo "Rebooting ..."
+reboot
+EOF
+    chmod a+x /etc/init.d/yunohost-firstboot
+    insserv /etc/init.d/yunohost-firstboot
+    touch /etc/yunohost/firstboot
+}
+
+###############################################################################
+# Image building specific stuff                                               #
+###############################################################################
+
+function clean_image() {
+    # Delete SSH keys
+    rm -f /etc/ssh/ssh_host_* >> $YUNOHOST_LOG 2>&1
+    yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa >> $YUNOHOST_LOG 2>&1
+    yes | ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa >> $YUNOHOST_LOG 2>&1
+    yes | ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa -b 521 >> $YUNOHOST_LOG 2>&1
+
+    # Deleting logs ...
+    find /var/log -type f -exec rm {} \; >> $YUNOHOST_LOG 2>&1
+
+    # Purging apt ...
+    apt-get --purge clean >> $YUNOHOST_LOG 2>&1
+}
+
+
+###############################################################################
 
 main
