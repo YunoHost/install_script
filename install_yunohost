@@ -98,7 +98,6 @@ function main()
 
     if is_raspbian ; then
         step del_user_pi     || die "Unable to delete user pi"
-        step change_hostname || die "Unable to change hostname"
         step setup_firstboot || die "Unable to setup firstboot"
     fi
 
@@ -398,11 +397,6 @@ function restart_services() {
 
 function del_user_pi() {
     deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
-}
-
-function change_hostname() {
-    sed -i 's/raspberrypi/yunohost/g' /etc/hosts
-    sed -i 's/raspberrypi/yunohost/g' /etc/hostname
 }
 
 function setup_firstboot() {
