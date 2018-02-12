@@ -456,78 +456,31 @@ while getopts ":aid:h" option; do
   esac
 done
 
-if ! step ensure_root ; then
-  die "This script must be run as root" 1
-fi
+step ensure_root || die "This script must be run as root"
 
 if is_raspbian ; then
-    if ! step ensure_pi_logout ; then
-      die "The user pi should be logged out" 14
-    fi
+    step ensure_pi_logout || die "The user pi should be logged out"
 fi
 
-if ! step upgrade_system ; then
-  die "Unable to update the system" 2
-fi
-
-if ! step installscript_dependencies ; then
-  die "Unable to install dependencies to install script" 3
-fi
-
-if ! step create_custom_config ; then
-  die "Creating custom configuration file /etc/yunohost/yunohost.conf failed" 4
-fi
-
-# if ! step set_domain ; then
-#   die "Setting hostname failed" 5
-# fi
-
-if ! step confirm_installation ; then
-  die "Installation cancelled at your request" 6
-fi
-
-if ! step setup_package_source ; then
-  die "Setting up deb package sources failed" 7
-fi
-
-if ! step apt_update ; then
-  die "Error caught during 'apt-get update'" 8
-fi
-
-if ! step register_debconf ; then
-  die "Unable to insert new values into debconf database" 9
-fi
-
-if ! step workaround_avahi_installation ; then
-  die "Unable to install workaround for avahi installation" 10
-fi
-
-if ! step install_yunohost_packages ; then
-  die "Installation of Yunohost packages failed" 11
-fi
-
-if ! step restart_services ; then
-  die "Error caught during services restart" 12
-fi
+step upgrade_system                || die "Unable to update the system"
+step installscript_dependencies    || die "Unable to install dependencies to install script"
+step create_custom_config          || die "Creating custom configuration file /etc/yunohost/yunohost.conf failed"
+step confirm_installation          || die "Installation cancelled at your request"
+step setup_package_source          || die "Setting up deb package sources failed"
+step apt_update                    || die "Error caught during 'apt-get update'"
+step register_debconf              || die "Unable to insert new values into debconf database"
+step workaround_avahi_installation || die "Unable to install workaround for avahi installation"
+step install_yunohost_packages     || die "Installation of Yunohost packages failed"
+step restart_services              || die "Error caught during services restart"
 
 if is_raspbian ; then
-    if ! step del_user_pi ; then
-        die "Unable to delete user pi" 15
-    fi
-
-    if ! step change_hostname ; then
-        die "Unable to change hostname" 16
-    fi
-    
-    if ! step setup_firstboot ; then
-        die "Unable to setup firstboot" 17
-    fi
+    step del_user_pi     || die "Unable to delete user pi"
+    step change_hostname || die "Unable to change hostname"
+    step setup_firstboot || die "Unable to setup firstboot"
 fi
 
 if [[ "$BUILD_IMAGE" == "1" ]] ; then
-    if ! step clean_image ; then
-        die "Unable to clean image" 18
-    fi
+    step clean_image || die "Unable to clean image"
 fi
 
 if is_raspbian ; then
@@ -535,10 +488,7 @@ if is_raspbian ; then
     reboot
 fi
 
-if ! step post_install ; then
-  die "Post-installation failed" 13 
-fi
-
+step post_install || die "Post-installation failed"
 
 # Success !
 success
