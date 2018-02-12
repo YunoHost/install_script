@@ -425,71 +425,82 @@ Options :
 # to the standard error, and a non-interactive shell will exit.
 set -u
 
-AUTOMODE=0
-DISTRIB=stable
-BUILD_IMAGE=0
-while getopts ":aid:h" option; do
-  case $option in
-    a)
-      AUTOMODE=1
-      export DEBIAN_FRONTEND=noninteractive
-      ;;
-    d)
-      DISTRIB=$OPTARG
-      ;;
-    i)
-      # This hidden option will allow to build generic image for Rpi/Olimex
-      BUILD_IMAGE=1
-      ;;
-    h)
-      usage
-      exit 0
-      ;;
-    :)
-      usage
-      exit 1
-      ;;
-    \?)
-      usage
-      exit 1
-      ;;
-  esac
-done
+function parse_options()
+{
+    AUTOMODE=0
+    DISTRIB=stable
+    BUILD_IMAGE=0
 
-step ensure_root || die "This script must be run as root"
+    while getopts ":aid:h" option; do
+        case $option in
+            a)
+                AUTOMODE=1
+                export DEBIAN_FRONTEND=noninteractive
+                ;;
+            d)
+                DISTRIB=$OPTARG
+                ;;
+            i)
+                # This hidden option will allow to build generic image for Rpi/Olimex
+                BUILD_IMAGE=1
+                ;;
+            h)
+                usage
+                exit 0
+                ;;
+            :)
+                usage
+                exit 1
+                ;;
+            \?)
+                usage
+                exit 1
+                ;;
+        esac
+    done
+}
 
-if is_raspbian ; then
-    step ensure_pi_logout || die "The user pi should be logged out"
-fi
+function main()
+{
+    parse_options
 
-step upgrade_system                || die "Unable to update the system"
-step installscript_dependencies    || die "Unable to install dependencies to install script"
-step create_custom_config          || die "Creating custom configuration file /etc/yunohost/yunohost.conf failed"
-step confirm_installation          || die "Installation cancelled at your request"
-step setup_package_source          || die "Setting up deb package sources failed"
-step apt_update                    || die "Error caught during 'apt-get update'"
-step register_debconf              || die "Unable to insert new values into debconf database"
-step workaround_avahi_installation || die "Unable to install workaround for avahi installation"
-step install_yunohost_packages     || die "Installation of Yunohost packages failed"
-step restart_services              || die "Error caught during services restart"
+    step ensure_root || die "This script must be run as root"
 
-if is_raspbian ; then
-    step del_user_pi     || die "Unable to delete user pi"
-    step change_hostname || die "Unable to change hostname"
-    step setup_firstboot || die "Unable to setup firstboot"
-fi
+    if is_raspbian ; then
+        step ensure_pi_logout || die "The user pi should be logged out"
+    fi
 
-if [[ "$BUILD_IMAGE" == "1" ]] ; then
-    step clean_image || die "Unable to clean image"
-fi
+    step upgrade_system                || die "Unable to update the system"
+    step installscript_dependencies    || die "Unable to install dependencies to install script"
+    step create_custom_config          || die "Creating custom configuration file /etc/yunohost/yunohost.conf failed"
+    step confirm_installation          || die "Installation cancelled at your request"
+    step setup_package_source          || die "Setting up deb package sources failed"
+    step apt_update                    || die "Error caught during 'apt-get update'"
+    step register_debconf              || die "Unable to insert new values into debconf database"
+    step workaround_avahi_installation || die "Unable to install workaround for avahi installation"
+    step install_yunohost_packages     || die "Installation of Yunohost packages failed"
+    step restart_services              || die "Error caught during services restart"
 
-if is_raspbian ; then
-    # Reboot should be done before postinstall to be able to run iptables rules
-    reboot
-fi
+    if is_raspbian ; then
+        step del_user_pi     || die "Unable to delete user pi"
+        step change_hostname || die "Unable to change hostname"
+        step setup_firstboot || die "Unable to setup firstboot"
+    fi
 
-step post_install || die "Post-installation failed"
+    if [[ "$BUILD_IMAGE" == "1" ]] ; then
+        step clean_image || die "Unable to clean image"
+    fi
 
-# Success !
-success
-exit 0
+    if is_raspbian ; then
+        # Reboot should be done before postinstall to be able to run iptables rules
+        reboot
+    fi
+
+    step post_install || die "Post-installation failed"
+
+    # Success !
+    success
+    exit 0
+}
+
+main
