@@ -82,7 +82,7 @@ function main()
     check_assertions
 
     step upgrade_system                || die "Unable to update the system"
-    step installscript_dependencies    || die "Unable to install dependencies to install script"
+    step install_script_dependencies   || die "Unable to install dependencies to install script"
     step create_custom_config          || die "Creating custom configuration file /etc/yunohost/yunohost.conf failed"
     step confirm_installation          || die "Installation cancelled at your request"
     step setup_package_source          || die "Setting up deb package sources failed"
@@ -248,7 +248,7 @@ function upgrade_system() {
     fi
 }
 
-function installscript_dependencies() {
+function install_script_dependencies() {
     # dependencies of the install script itself
     local DEPENDENCIES="lsb-release wget whiptail"
 
