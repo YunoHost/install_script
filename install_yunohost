@@ -20,7 +20,6 @@ set -u
 # Globals
 
 readonly YUNOHOST_LOG="/var/log/yunohost-installation.log"
-readonly THIS_MACHINE_RELEASE="$(lsb_release -c | awk '{print $2}')"
 
 ###############################################################################
 # Main functions                                                              #
@@ -49,7 +48,7 @@ function parse_options()
     BUILD_IMAGE=0
     FORCE=0
 
-    while getopts ":aid:h" option; do
+    while getopts ":aid:fh" option; do
         case $option in
             a)
                 AUTOMODE=1
@@ -83,7 +82,9 @@ function parse_options()
 
 function main()
 {
-    parse_options
+    parse_options "$@"
+
+    rm -f $YUNOHOST_LOG
 
     check_assertions
 
@@ -203,10 +204,10 @@ function check_assertions()
     # Assert we're on Stretch
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ ! "$(cat /etc/debian_version)" =~ ^9.* ]] || die "This script can only be ran on Debian Stretch."
+    [[ "$(cat /etc/debian_version)" =~ ^9.* ]] || die "This script can only be ran on Debian Stretch."
 
     # Assert we're root
-    [[ "$(id -u)" != "0" ]] || die "This script must be run as root."
+    [[ "$(id -u)" == "0" ]] || die "This script must be run as root."
 
     # Assert systemd is installed
     command -v systemctl > /dev/null || die "YunoHost requires systemd to be installed."
@@ -218,10 +219,10 @@ function check_assertions()
     fi
 
     # Check possible conflict with apache, bind9.
-    [[ -z "$(dpkg --list | grep ' bind9')" ]] || [[ "$FORCE" == "1" ]] \
+    [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9 ')" ]] || [[ "$FORCE" == "1" ]] \
         || die "Bind9 is installed and might conflict with dnsmasq. Uninstall it first, or if you know what you are doing, run this script with -f."
 
-    [[ -z "$(dpkg --list | grep ' apache2')" ]] || [[ "$FORCE" == "1" ]] \
+    [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2 ')" ]] || [[ "$FORCE" == "1" ]] \
         || die "Apache is installed and might conflict with nginx. Uninstall it first, or if you know what you are doing, run this script with -f."
 
 }
@@ -517,4 +518,4 @@ function clean_image() {
 
 ###############################################################################
 
-main
+main "$@"
