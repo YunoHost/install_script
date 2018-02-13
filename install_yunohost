@@ -36,6 +36,8 @@ Options :
           This does not perform the post-install step.
   -d      Choose the distribution to install ('stable', 'testing', 'unstable').
           Defaults to 'stable'
+  -f      Ignore checks before starting the installation. Use only if you know
+          what you are doing.
   -h      Prints this help and exit
 "
 }
@@ -45,6 +47,7 @@ function parse_options()
     AUTOMODE=0
     DISTRIB=stable
     BUILD_IMAGE=0
+    FORCE=0
 
     while getopts ":aid:h" option; do
         case $option in
@@ -54,6 +57,9 @@ function parse_options()
                 ;;
             d)
                 DISTRIB=$OPTARG
+                ;;
+            f)
+                FORCE=1
                 ;;
             i)
                 # This hidden option will allow to build generic image for Rpi/Olimex
@@ -210,6 +216,14 @@ function check_assertions()
     if is_raspbian ; then
         user_pi_logged_out || die "The user pi should be logged out."
     fi
+
+    # Check possible conflict with apache, bind9.
+    [[ -z "$(dpkg --list | grep ' bind9')" ]] || [[ "$FORCE" == "1" ]] \
+        || die "Bind9 is installed and might conflict with dnsmasq. Uninstall it first, or if you know what you are doing, run this script with -f."
+
+    [[ -z "$(dpkg --list | grep ' apache2')" ]] || [[ "$FORCE" == "1" ]] \
+        || die "Apache is installed and might conflict with nginx. Uninstall it first, or if you know what you are doing, run this script with -f."
+
 }
 
 function upgrade_system() {
