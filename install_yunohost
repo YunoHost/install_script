@@ -27,7 +27,7 @@ readonly THIS_MACHINE_RELEASE="$(lsb_release -c | awk '{print $2}')"
 ###############################################################################
 
 function usage() {
-  print "
+  echo "
 Usage :
   `basename $0` [-a] [-d <DISTRIB>] [-h]
 
@@ -108,8 +108,8 @@ function main()
 
     step post_install || die "Post-installation failed"
 
-    # Success !
-    success
+    info "Installation logs are available in $YUNOHOST_LOG"
+    success "YunoHost installation completed !"
     exit 0
 }
 
@@ -117,50 +117,50 @@ function main()
 # Helpers                                                                     #
 ###############################################################################
 
-function print() {
-    printf "%s\n" "$*";
+readonly normal=$(printf '\033[0m')
+readonly bold=$(printf '\033[1m')
+readonly faint=$(printf '\033[2m')
+readonly underline=$(printf '\033[4m')
+readonly negative=$(printf '\033[7m')
+readonly red=$(printf '\033[31m')
+readonly green=$(printf '\033[32m')
+readonly orange=$(printf '\033[33m')
+readonly blue=$(printf '\033[34m')
+readonly yellow=$(printf '\033[93m')
+readonly white=$(printf '\033[39m')
+
+function success()
+{
+  local msg=${1}
+  echo "[${green} OK ${normal}] ${msg}" | tee -a $YUNOHOST_LOG
 }
 
-function notify_about_install_logs() {
-    print "
-Installation logs are located in $YUNOHOST_LOG
-" 1>&2
-
+function info()
+{
+  local msg=${1}
+  echo "[${blue}INFO${normal}] ${msg}" | tee -a $YUNOHOST_LOG
 }
 
-function success() {
-    tput setf 2
-    print "Success !"
-    tput sgr 0
-    notify_about_install_logs
+function warn()
+{
+  local msg=${1}
+  echo "[${orange}WARN${normal}] ${msg}" | tee -a $YUNOHOST_LOG >&2
+}
+
+function error()
+{
+  local msg=${1}
+  echo "[${red}FAIL${normal}] ${msg}" | tee -a $YUNOHOST_LOG >&2
 }
 
 function die() {
-    # Print to log file
-    print "
-Failure !
-The following error was caught during Yunohost installation :
-
-$1
-" >> $YUNOHOST_LOG
-
-    # Print to terminal
-    tput setf 4
-    print "Failure !"
-    tput sgr 0
-
-    print "\
-The following error was caught during YunoHost installation :
-
-$1
-" 1>&2
-
-    notify_about_install_logs
-    exit "${2:-1}"
+    error "$1"
+    info "Installation logs are available in $YUNOHOST_LOG"
+    exit 1
 }
 
 function step() {
-  printf "[ $(date --rfc-3339=seconds) ] ----- [ entering %-30s ]\n" "$1" >> $YUNOHOST_LOG
+  info "Running $1"
   $*
   local return_code="$?"
   return $return_code
@@ -339,7 +339,7 @@ function workaround_avahi_installation() {
 
     # Return without error if avahi already exists
     if id avahi > /dev/null 2>&1 ; then
-        print "User avahi already exists (with uid $(id avahi)), skipping avahi workaround" >> $YUNOHOST_LOG
+        info "User avahi already exists (with uid $(id avahi)), skipping avahi workaround"
         return 0
     fi
 
@@ -350,7 +350,7 @@ function workaround_avahi_installation() {
         avahi_id=$((500 + RANDOM % 500))
     done
 
-    print "Workaround for avahi : creating avahi user with uid $avahi_id" >> $YUNOHOST_LOG
+    info "Workaround for avahi : creating avahi user with uid $avahi_id"
 
     # Use the same adduser parameter as in the avahi-daemon postinst script
     # Just specify --uid explicitely
