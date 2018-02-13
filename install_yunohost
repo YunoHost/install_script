@@ -138,25 +138,25 @@ readonly white=$(printf '\033[39m')
 function success()
 {
   local msg=${1}
-  echo "[${green} OK ${normal}] ${msg}" | tee -a $YUNOHOST_LOG
+  echo "[${bold}${green} OK ${normal}] ${msg}" | tee -a $YUNOHOST_LOG
 }
 
 function info()
 {
   local msg=${1}
-  echo "[${blue}INFO${normal}] ${msg}" | tee -a $YUNOHOST_LOG
+  echo "[${bold}${blue}INFO${normal}] ${msg}" | tee -a $YUNOHOST_LOG
 }
 
 function warn()
 {
   local msg=${1}
-  echo "[${orange}WARN${normal}] ${msg}" | tee -a $YUNOHOST_LOG >&2
+  echo "[${bold}${orange}WARN${normal}] ${msg}" | tee -a $YUNOHOST_LOG >&2
 }
 
 function error()
 {
   local msg=${1}
-  echo "[${red}FAIL${normal}] ${msg}" | tee -a $YUNOHOST_LOG >&2
+  echo "[${bold}${red}FAIL${normal}] ${msg}" | tee -a $YUNOHOST_LOG >&2
 }
 
 function die() {
