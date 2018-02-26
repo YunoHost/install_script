@@ -19,7 +19,7 @@ set -u
 
 # Globals
 
-readonly YUNOHOST_LOG="/var/log/yunohost-installation.log"
+readonly YUNOHOST_LOG="/var/log/yunohost-installation_$(date +%Y%m%d_%H%M%S).log"
 
 ###############################################################################
 # Main functions                                                              #
@@ -83,8 +83,6 @@ function parse_options()
 function main()
 {
     parse_options "$@"
-
-    rm -f $YUNOHOST_LOG
 
     check_assertions
 
