@@ -238,9 +238,10 @@ function upgrade_system() {
                         -y --force-yes install rpi-update \
         || return 3
 
-        rpi-update >> $YUNOHOST_LOG 2>&1 \
-        || return 4
-
+    	if [[ "$BUILD_IMAGE" != "1" ]] ; then
+		rpi-update >> $YUNOHOST_LOG 2>&1 \
+		|| return 4
+	fi
     fi
 }
 
