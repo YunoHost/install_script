@@ -179,7 +179,7 @@ function apt_get_wrapper() {
           --                                           \
           apt-get $*
     else
-        apt-get $* >> $YUNOHOST_LOG 2>&1
+        apt-get $* 2>&1 | tee -a $YUNOHOST_LOG
     fi
 }
 
@@ -239,7 +239,7 @@ function upgrade_system() {
         || return 3
 
     	if [[ "$BUILD_IMAGE" != "1" ]] ; then
-		rpi-update >> $YUNOHOST_LOG 2>&1 \
+		(rpi-update 2>&1 | tee -a $YUNOHOST_LOG) \
 		|| return 4
 	fi
     fi
