@@ -466,7 +466,9 @@ function user_pi_logged_out() {
 }
 
 function del_user_pi() {
-    deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
+    if id "pi" >/dev/null 2>&1; then
+        deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
+    fi
 }
 
 function setup_firstboot() {
