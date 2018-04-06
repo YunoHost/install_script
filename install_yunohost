@@ -461,7 +461,7 @@ function is_raspbian() {
 }
 
 function user_pi_logged_out() {
-    who | grep pi > /dev/null && return 1
+    who | grep -w pi > /dev/null && return 1
     return 0
 }
 
