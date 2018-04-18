@@ -254,6 +254,7 @@ function install_script_dependencies() {
         DEPENDENCIES+=" dialog"
     fi
 
+    apt_update
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
                     -y --force-yes install               \
                     $DEPENDENCIES                        \
