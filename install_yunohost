@@ -247,7 +247,8 @@ function upgrade_system() {
 
 function install_script_dependencies() {
     # dependencies of the install script itself
-    local DEPENDENCIES="lsb-release wget whiptail gnupg apt-transport-https"
+    # We need libtext-iconv-perl otherwise install fails weirdly in LXCs :|
+    local DEPENDENCIES="lsb-release wget whiptail gnupg apt-transport-https libtext-iconv-perl"
 
     if [[ "$AUTOMODE" == "0" ]] ;
     then
