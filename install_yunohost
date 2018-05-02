@@ -247,7 +247,9 @@ function upgrade_system() {
 
 function install_script_dependencies() {
     # dependencies of the install script itself
-    # We need libtext-iconv-perl otherwise install fails weirdly in LXCs :|
+    # We need libtext-iconv-perl because in some weird case, this errors pops up during the install
+    # of some packages ... :|
+    # Can't locate object method "new" via package "Text::Iconv"
     local DEPENDENCIES="lsb-release wget whiptail gnupg apt-transport-https libtext-iconv-perl"
 
     if [[ "$AUTOMODE" == "0" ]] ;
