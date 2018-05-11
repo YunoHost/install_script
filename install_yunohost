@@ -99,7 +99,6 @@ function main()
 
     if is_raspbian ; then
         step del_user_pi     || die "Unable to delete user pi"
-        step setup_firstboot || die "Unable to setup firstboot"
     fi
 
     if [[ "$BUILD_IMAGE" == "1" ]] ; then
@@ -469,33 +468,6 @@ function del_user_pi() {
     if id "pi" >/dev/null 2>&1; then
         deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
     fi
-}
-
-function setup_firstboot() {
-
-    cat > /etc/init.d/yunohost-firstboot << EOF
-#!/bin/sh
-### BEGIN INIT INFO
-# Provides: expand rootfs and Generates new ssh host keys on first boot
-# Required-Start: \$remote_fs \$syslog
-# Required-Stop: \$remote_fs \$syslog
-# Default-Start: 2 3 4 5
-# Default-Stop:
-# Short-Description: Generates new ssh host keys on first boot
-# Description: Generates apt-get --purge clean new ssh host keys on $
-### END INIT INFO
-echo "Expanding rootfs ..."
-raspi-config --expand-rootfs
-echo "Removing myself ..."
-insserv -r /etc/init.d/yunohost-firstboot
-rm -f /etc/init.d/yunohost-firstboot
-rm /etc/yunohost/firstboot
-echo "Rebooting ..."
-reboot
-EOF
-    chmod a+x /etc/init.d/yunohost-firstboot
-    insserv /etc/init.d/yunohost-firstboot
-    touch /etc/yunohost/firstboot
 }
 
 ###############################################################################
