@@ -209,6 +209,9 @@ function check_assertions()
     # Assert systemd is installed
     command -v systemctl > /dev/null || die "YunoHost requires systemd to be installed."
 
+    # Check that kernel is >= 3.12, otherwise systemd won't work properly. Cf. https://github.com/systemd/systemd/issues/5236#issuecomment-277779394
+    dpkg --compare-versions "$(uname -r)" "ge" "3.12" || die "YunoHost requires a kernel >= 3.12. Please consult your hardware documentation or VPS provider to learn how to upgrade your kernel."
+
     # If we're on Raspbian, we want the user 'pi' to be logged out because
     # it's going to be deleted for security reasons...
     if is_raspbian ; then
