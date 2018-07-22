@@ -110,7 +110,7 @@ function main()
         reboot
     fi
 
-    step fix_locals
+    step fix_locales
 
     step post_install || die "Post-installation failed"
 
@@ -404,7 +404,7 @@ function restart_services() {
     return 0
 }
 
-function fix_locals() {
+function fix_locales() {
     [ "$(grep LC_ALL /etc/environment)" ] || echo 'LC_ALL="en_US.UTF-8"' >> /etc/environment
     source /etc/environment
     export LC_ALL
