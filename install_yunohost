@@ -110,6 +110,8 @@ function main()
         reboot
     fi
 
+    step fix_locals
+
     step post_install || die "Post-installation failed"
 
     info "Installation logs are available in $YUNOHOST_LOG"
@@ -400,6 +402,12 @@ function restart_services() {
 
     # NOTE : We don't fail if slapd fails to restart...
     return 0
+}
+
+function fix_locals() {
+    [ "$(grep LC_ALL /etc/environment)" ] || echo 'LC_ALL="en_US.UTF-8"' >> /etc/environment
+    source /etc/environment
+    export LC_ALL
 }
 
 function post_install() {
