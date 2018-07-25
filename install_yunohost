@@ -90,6 +90,7 @@ function main()
     step install_script_dependencies   || die "Unable to install dependencies to install script"
     step create_custom_config          || die "Creating custom configuration file /etc/yunohost/yunohost.conf failed"
     step confirm_installation          || die "Installation cancelled at your request"
+    step fix_locales                   # do not die for a failure here, it's minor
     step setup_package_source          || die "Setting up deb package sources failed"
     step apt_update                    || die "Error caught during 'apt-get update'"
     step register_debconf              || die "Unable to insert new values into debconf database"
@@ -400,6 +401,12 @@ function restart_services() {
 
     # NOTE : We don't fail if slapd fails to restart...
     return 0
+}
+
+function fix_locales() {
+    [ "$(grep LC_ALL /etc/environment)" ] || echo 'LC_ALL="en_US.UTF-8"' >> /etc/environment
+    source /etc/environment
+    export LC_ALL
 }
 
 function post_install() {
