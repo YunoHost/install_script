@@ -311,22 +311,21 @@ Your current SSH configuration differs from common default configuration. If you
 "
 
     # If root login is not deactivate
-    if ! grep -E "^[ \t]*PermitRootLogin[ \t]+no" /etc/ssh/sshd_config ; then
+    if ! grep -E "^[[:blank:]]*PermitRootLogin[[:blank:]]+no" /etc/ssh/sshd_config ; then
         sshd_config_differs="1"
         text="$text- you will not be able to connect with root user, instead you will have to use admin user.
 "
     fi
     
     # If we are using an other Port
-    if ! grep -E "^[ \t]*Port[ \t]+22[ \t]*(#.*)?$" /etc/ssh/sshd_config && \
-        grep -E "^[ \t]*Port[ \t]$" /etc/ssh/sshd_config ; then
+    if grep -Ev "^[[:blank:]]*Port[[:blank:]]+22[[:blank:]]*(#.*)?$" /etc/ssh/sshd_config | grep -E "^[[:blank:]]*Port[[:blank:]]+[[:digit:]]+$" ; then
         sshd_config_differs="1"
         text="$text- you will have to connect using port 22 instead of your custom SSH port. Feel free to reconfigure it after the postinstallation.
 "
     fi
 
     # If we are using DSA key for ssh server fingerprint
-    if grep "^[ \t]*HostKey[ \t]+/etc/ssh/ssh_host_dsa_key" /etc/ssh/sshd_config ; then
+    if grep -E "^[[:blank:]]*HostKey[[:blank:]]+/etc/ssh/ssh_host_dsa_key" /etc/ssh/sshd_config ; then
         sshd_config_differs="1"
         text="$text- you might need to invalidate a warning and to recheck fingerprint of your server, because DSA key will be disabled.
 "
