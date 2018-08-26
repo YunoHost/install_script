@@ -90,6 +90,7 @@ function main()
     step install_script_dependencies   || die "Unable to install dependencies to install script"
     step create_custom_config          || die "Creating custom configuration file /etc/yunohost/yunohost.conf failed"
     step confirm_installation          || die "Installation cancelled at your request"
+    step manage_ssh_config             || die "Error caught during sshd management"
     step fix_locales                   # do not die for a failure here, it's minor
     step setup_package_source          || die "Setting up deb package sources failed"
     step apt_update                    || die "Error caught during 'apt-get update'"
@@ -276,9 +277,6 @@ function install_script_dependencies() {
 function create_custom_config() {
     # Create YunoHost configuration folder
     mkdir -p /etc/yunohost/
-
-    # Store info about installation method
-    touch /etc/yunohost/from_script
 }
 
 function confirm_installation() {
@@ -298,6 +296,62 @@ will be overwritten !
 Are you sure you want  to proceed with the installation of Yunohost?
 "
   whiptail --title "Yunohost Installation" --yesno "$text" 20 78
+}
+
+function manage_sshd_config() {
+    # In auto mode we erase the current sshd config
+    [[ "$AUTOMODE" == "1" ]] && return 0
+
+    [[ ! -f /etc/ssh/sshd_config ]] && return 0
+    
+    local sshd_config_differs = "0"
+    local text="
+Caution !
+
+To ensure a global security of your server, YunoHost recommends to let it manage the SSH configuration of your server.
+
+Your current SSH configuration differs from common default configuration. If you
+let YunoHost reconfigure it, the way to access with SSH to your server could
+change after postinstall:
+"
+
+    # If root login is not deactivate
+    if ! grep -E "^[ \t]*PermitRootLogin[ \t]+no" /etc/ssh/sshd_config ; then
+        sshd_config_differs = "1"
+        text="$text- you will not be able to connect with root user, instead you will have to use admin user.
+"
+    fi
+    
+    # If we are using an other Port
+    if ! grep -E "^[ \t]*Port[ \t]+22[ \t]*(#.*)?$" /etc/ssh/sshd_config && \
+        grep -E "^[ \t]*Port[ \t]$" /etc/ssh/sshd_config ; then
+        sshd_config_differs = "1"
+        text="$text- you will have to connect using port 22 instead of your custom SSH port. Feel free to reconfigure it after the postinstallation.
+"
+    fi
+
+    # If we are using DSA key for ssh server fingerprint
+    if grep "^[ \t]*HostKey[ \t]+/etc/ssh/ssh_host_dsa_key" /etc/ssh/sshd_config ; then
+        sshd_config_differs = "1"
+        text="$text- you might need to invalidate a warning and to recheck fingerprint of your server, because DSA key will be disabled.
+"
+
+    fi
+
+    text="${text} Are you agree to let YunoHost replace your configuration and change you way to access your server ?
+"
+    
+    # In all this case we ask user
+    if [[ "$sshd_config_differs" == "1" ]] ; then
+        if ! whiptail --title "SSH Configuration" --yesno "$text" 20 78 --defaultno ; then
+            
+            # Keep a copy to restore it after regen-conf
+            cp /etc/ssh/sshd_config /etc/ssh/sshd_config.to_restore
+        fi
+    fi
+
+    return 0
+
 }
 
 function setup_package_source() {
