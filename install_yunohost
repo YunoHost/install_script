@@ -90,7 +90,7 @@ function main()
     step install_script_dependencies   || die "Unable to install dependencies to install script"
     step create_custom_config          || die "Creating custom configuration file /etc/yunohost/yunohost.conf failed"
     step confirm_installation          || die "Installation cancelled at your request"
-    step manage_ssh_config             || die "Error caught during sshd management"
+    step manage_sshd_config            || die "Error caught during sshd management"
     step fix_locales                   # do not die for a failure here, it's minor
     step setup_package_source          || die "Setting up deb package sources failed"
     step apt_update                    || die "Error caught during 'apt-get update'"
@@ -304,7 +304,7 @@ function manage_sshd_config() {
 
     [[ ! -f /etc/ssh/sshd_config ]] && return 0
     
-    local sshd_config_differs = "0"
+    local sshd_config_differs="0"
     local text="
 Caution !
 
@@ -317,7 +317,7 @@ change after postinstall:
 
     # If root login is not deactivate
     if ! grep -E "^[ \t]*PermitRootLogin[ \t]+no" /etc/ssh/sshd_config ; then
-        sshd_config_differs = "1"
+        sshd_config_differs="1"
         text="$text- you will not be able to connect with root user, instead you will have to use admin user.
 "
     fi
@@ -325,14 +325,14 @@ change after postinstall:
     # If we are using an other Port
     if ! grep -E "^[ \t]*Port[ \t]+22[ \t]*(#.*)?$" /etc/ssh/sshd_config && \
         grep -E "^[ \t]*Port[ \t]$" /etc/ssh/sshd_config ; then
-        sshd_config_differs = "1"
+        sshd_config_differs="1"
         text="$text- you will have to connect using port 22 instead of your custom SSH port. Feel free to reconfigure it after the postinstallation.
 "
     fi
 
     # If we are using DSA key for ssh server fingerprint
     if grep "^[ \t]*HostKey[ \t]+/etc/ssh/ssh_host_dsa_key" /etc/ssh/sshd_config ; then
-        sshd_config_differs = "1"
+        sshd_config_differs="1"
         text="$text- you might need to invalidate a warning and to recheck fingerprint of your server, because DSA key will be disabled.
 "
 
