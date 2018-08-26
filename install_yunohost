@@ -305,14 +305,9 @@ function manage_sshd_config() {
     [[ ! -f /etc/ssh/sshd_config ]] && return 0
     
     local sshd_config_differs="0"
-    local text="
-Caution !
+    local text="To ensure a global security of your server, YunoHost recommends to let it manage the SSH configuration of your server.
 
-To ensure a global security of your server, YunoHost recommends to let it manage the SSH configuration of your server.
-
-Your current SSH configuration differs from common default configuration. If you
-let YunoHost reconfigure it, the way to access with SSH to your server could
-change after postinstall:
+Your current SSH configuration differs from common default configuration. If you let YunoHost reconfigure it, the way to access with SSH to your server could change after postinstall:
 "
 
     # If root login is not deactivate
@@ -338,12 +333,13 @@ change after postinstall:
 
     fi
 
-    text="${text} Are you agree to let YunoHost replace your configuration and change you way to access your server ?
+    text="${text}
+Are you agree to let YunoHost replace your configuration and change you way to access your server ?
 "
     
     # In all this case we ask user
     if [[ "$sshd_config_differs" == "1" ]] ; then
-        if ! whiptail --title "SSH Configuration" --yesno "$text" 20 78 --defaultno ; then
+        if ! whiptail --title "SSH Configuration" --yesno "$text" 20 78 --defaultno --scrolltext ; then
             
             # Keep a copy to restore it after regen-conf
             cp /etc/ssh/sshd_config /etc/ssh/sshd_config.to_restore
