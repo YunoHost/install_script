@@ -233,6 +233,15 @@ function upgrade_system() {
     apt_get_wrapper update \
     || return 1
 
+    # We need libtext-iconv-perl even before the dist-upgrade,
+    # otherwise the dist-upgrade might fails on some setups because
+    # perl is yolomacnuggets :|
+    # Stuff like "Can't locate object method "new" via package "Text::Iconv""
+    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
+                    -y --force-yes install               \
+                    libtext-iconv-perl                   \
+    || return 1
+
     apt_get_wrapper -y dist-upgrade \
     || return 2
 
@@ -250,10 +259,7 @@ function upgrade_system() {
 
 function install_script_dependencies() {
     # dependencies of the install script itself
-    # We need libtext-iconv-perl because in some weird case, this errors pops up during the install
-    # of some packages ... :|
-    # Can't locate object method "new" via package "Text::Iconv"
-    local DEPENDENCIES="lsb-release wget whiptail gnupg apt-transport-https libtext-iconv-perl"
+    local DEPENDENCIES2="lsb-release wget whiptail gnupg apt-transport-https"
 
     if [[ "$AUTOMODE" == "0" ]] ;
     then
