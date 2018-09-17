@@ -259,7 +259,7 @@ function upgrade_system() {
 
 function install_script_dependencies() {
     # dependencies of the install script itself
-    local DEPENDENCIES2="lsb-release wget whiptail gnupg apt-transport-https"
+    local DEPENDENCIES="lsb-release wget whiptail gnupg apt-transport-https"
 
     if [[ "$AUTOMODE" == "0" ]] ;
     then
