@@ -340,6 +340,7 @@ nslcd	nslcd/ldap-uris	string	ldap://localhost/
 nslcd	nslcd/ldap-binddn	string
 nslcd	nslcd/ldap-base	string	dc=yunohost,dc=org
 libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
+postsrsd postsrsd/domain string yunohost.org
 EOF
 }
 
