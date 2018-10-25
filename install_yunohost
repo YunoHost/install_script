@@ -305,35 +305,34 @@ function manage_sshd_config() {
     [[ ! -f /etc/ssh/sshd_config ]] && return 0
     
     local sshd_config_differs="0"
-    local text="To ensure a global security of your server, YunoHost recommends to let it manage the SSH configuration of your server.
-
-Your current SSH configuration differs from common default configuration. If you let YunoHost reconfigure it, the way to access with SSH to your server could change after postinstall:
-"
+    local text="To improve the security of your server, it is recommended to let YunoHost manage the SSH configuration.
+Your current SSH configuration differs from the recommended configuration. 
+If you let YunoHost reconfigure it, the way you connect to your server through SSH will change in the following way:"
 
     # If root login is not deactivate
     if ! grep -E "^[[:blank:]]*PermitRootLogin[[:blank:]]+no" /etc/ssh/sshd_config ; then
         sshd_config_differs="1"
-        text="$text- you will not be able to connect with root user, instead you will have to use admin user.
+        text="$text- you will not be able to connect as root through SSH. Instead you should use the admin user ;
 "
     fi
     
     # If we are using an other Port
     if grep -Ev "^[[:blank:]]*Port[[:blank:]]+22[[:blank:]]*(#.*)?$" /etc/ssh/sshd_config | grep -E "^[[:blank:]]*Port[[:blank:]]+[[:digit:]]+$" ; then
         sshd_config_differs="1"
-        text="$text- you will have to connect using port 22 instead of your custom SSH port. Feel free to reconfigure it after the postinstallation.
+        text="$text- you will have to connect using port 22 instead of your current custom SSH port. Feel free to reconfigure it after the postinstallation.
 "
     fi
 
     # If we are using DSA key for ssh server fingerprint
     if grep -E "^[[:blank:]]*HostKey[[:blank:]]+/etc/ssh/ssh_host_dsa_key" /etc/ssh/sshd_config ; then
         sshd_config_differs="1"
-        text="$text- you might need to invalidate a warning and to recheck fingerprint of your server, because DSA key will be disabled.
+        text="$text- the DSA key will be disabled. Hence, you might need to invalidate a spooky warning from your SSH client, and recheck the fingerprint of your server ;
 "
 
     fi
 
     text="${text}
-Are you agree to let YunoHost replace your configuration and change you way to access your server ?
+Do you agree to let YunoHost apply those changes to your configuration and therefore affect the way you connect through SSH ?
 "
     
     # In all this case we ask user
