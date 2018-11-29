@@ -111,10 +111,9 @@ function main()
         reboot
     fi
 
-    step post_install || die "Post-installation failed"
-
     info "Installation logs are available in $YUNOHOST_LOG"
     success "YunoHost installation completed !"
+    conclusion
     exit 0
 }
 
@@ -417,51 +416,25 @@ function fix_locales() {
     export LC_ALL
 }
 
-function post_install() {
-    # No postinstall in auto mode
-    [[ "$AUTOMODE" == "1" ]] && return 0
+function conclusion() {
+    cat << EOF
+===============================================================================
+You should now proceed with Yunohost post-installation. This is where you will
+be asked for :
+- the main domain of your server ;
+- the administration password.
 
-    # Remove whiptail and dialog remains...
-    clear
+You can perform this step :
+- from the command line, by running 'yunohost tools postinstall' as root
+- or from your web browser, by accessing https://11.22.33.44 (replacing the
+numbers with your server's local or global IP).
 
-    local text="
-Yunohost packages have been installed successfully!
-
-You can now proceed with Yunohost post-installation.
-This is where you will be asked for :
-- the main DNS domain name of your server
-- the administration password
-
-You can also perform this step later on your own :
-- either from a shell, by running 'yunohost tools postinstall'
-  as root
-- either from your web browser, by accessing https://yunohost.local
-
-Please refer to https://yunohost.org/#/postinstall
-for additionnal information.
-
-Do you want to proceed with YunoHost post-installation now?
-"
-    whiptail --title "Post-installation" --yesno "$text" 25 78 \
-        || return 0
-
-    /usr/bin/yunohost tools postinstall
-
-    local POSTINSTALL_EXIT_CODE="$?"
-    while [[ "$POSTINSTALL_EXIT_CODE" != "0" ]] ;
-    do
-        local text_retry="
-Yunohost post-installation has failed.
-
-Do you want to try again now?
-"
-        whiptail --title "Post-installation" --yesno "$text_retry" 12 78 --defaultno \
-            || return $POSTINSTALL_EXIT_CODE
-
-        /usr/bin/yunohost tools postinstall
-        POSTINSTALL_EXIT_CODE="$?"
-    done
-    return 0
+If this is your first time with YunoHost, it is strongly advised to take time
+to read the administator documentation and in particular the sections
+'Finalizing your setup' and 'Getting to know YunoHost'. It is available at the
+following URL : https://yunohost.org/admindoc
+===============================================================================
+EOF
 }
 
 ###############################################################################
