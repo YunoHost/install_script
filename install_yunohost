@@ -21,6 +21,17 @@ set -u
 
 readonly YUNOHOST_LOG="/var/log/yunohost-installation_$(date +%Y%m%d_%H%M%S).log"
 
+# Custom colors for whiptail
+export NEWT_COLORS='
+root=white,black
+roottext=white,black
+window=white,black
+border=white,black
+title=white,black
+textbox=white,black
+button=black,white
+'
+
 ###############################################################################
 # Main functions                                                              #
 ###############################################################################
