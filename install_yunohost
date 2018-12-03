@@ -343,7 +343,7 @@ Do you agree to let YunoHost apply those changes to your configuration and there
 
         # Keep a copy to be restored during the postinstall
         # so that the ssh confs behaves as manually modified.
-        cp /etc/ssh/sshd_config /etc/ssh/sshd_config.to_restore
+        cp /etc/ssh/sshd_config /etc/ssh/sshd_config.before_yunohost
     fi
 
     return 0
