@@ -417,6 +417,17 @@ function fix_locales() {
 }
 
 function conclusion() {
+    # Get first local IP and global IP
+    local local_ip=$(hostname --all-ip-address | awk '{print $1}')
+    local global_ip=$(curl https://ip.yunohost.org 2>/dev/null)
+
+    # Will ignore local ip if it's already the global IP (e.g. for some VPS)
+    [[ "$local_ip" != "$global_ip" ]] || local_ip=""
+
+    # Formatting
+    [[ -z "$local_ip" ]] || local_ip=$(echo -e "\n    - https://$local_ip/ (local IP, if self-hosting at home)")
+    [[ -z "$global_ip" ]] || global_ip=$(echo -e "\n    - https://$global_ip/ (global IP, if you're on a VPS)")
+
     cat << EOF
 ===============================================================================
 You should now proceed with Yunohost post-installation. This is where you will
@@ -426,8 +437,7 @@ be asked for :
 
 You can perform this step :
 - from the command line, by running 'yunohost tools postinstall' as root
-- or from your web browser, by accessing https://11.22.33.44 (replacing the
-numbers with your server's local or global IP).
+- or from your web browser, by accessing : ${local_ip}${global_ip}
 
 If this is your first time with YunoHost, it is strongly advised to take time
 to read the administator documentation and in particular the sections
