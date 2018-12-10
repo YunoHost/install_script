@@ -432,17 +432,17 @@ function conclusion() {
 ===============================================================================
 You should now proceed with Yunohost post-installation. This is where you will
 be asked for :
-- the main domain of your server ;
-- the administration password.
+  - the main domain of your server ;
+  - the administration password.
 
 You can perform this step :
-- from the command line, by running 'yunohost tools postinstall' as root
-- or from your web browser, by accessing : ${local_ip}${global_ip}
+  - from the command line, by running 'yunohost tools postinstall' as root
+  - or from your web browser, by accessing : ${local_ip}${global_ip}
 
-If this is your first time with YunoHost, it is strongly advised to take time
-to read the administator documentation and in particular the sections
-'Finalizing your setup' and 'Getting to know YunoHost'. It is available at the
-following URL : https://yunohost.org/admindoc
+If this is your first time with YunoHost, it is strongly recommended to take
+time to read the administator documentation and in particular the sections
+'Finalizing your setup' and 'Getting to know YunoHost'. It is available at
+the following URL : https://yunohost.org/admindoc
 ===============================================================================
 EOF
 }
