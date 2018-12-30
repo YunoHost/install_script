@@ -252,7 +252,8 @@ function upgrade_system() {
                     libtext-iconv-perl                   \
     || return 1
 
-    apt_get_wrapper -y dist-upgrade \
+    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
+                    -y dist-upgrade \
     || return 2
 
     if is_raspbian ; then
