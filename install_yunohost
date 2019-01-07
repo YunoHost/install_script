@@ -252,6 +252,15 @@ function upgrade_system() {
                     libtext-iconv-perl                   \
     || return 1
 
+    # Manually upgrade grub stuff in non-interactive mode,
+    # otherwise a weird technical question is asked to the user
+    # regarding how to upgrade grub's configuration...
+    DEBIAN_FRONTEND=noninteractive \
+    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
+                    -y install --only-upgrade \
+                    grub-common grub2-common \
+    || true
+
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
                     -y dist-upgrade \
     || return 2
