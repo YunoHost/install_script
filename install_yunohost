@@ -432,6 +432,12 @@ function restart_services() {
 }
 
 function fix_locales() {
+    # This function tries to fix the whole locale and perl mess about missing locale files
+    
+    # Generate at least en_US.UTF-8
+    sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && locale-gen
+    
+    # If no /etc/environment exists, default to en_US.UTF-8
     [ "$(grep LC_ALL /etc/environment)" ] || echo 'LC_ALL="en_US.UTF-8"' >> /etc/environment
     source /etc/environment
     export LC_ALL
