@@ -215,6 +215,15 @@ function check_assertions()
     # only to check this...
     [[ "$(cat /etc/debian_version)" =~ ^9.* ]] || die "This script can only be ran on Debian Stretch."
 
+    # Forbid people from installing on Ubuntu or Linux mint ...
+    if [[ -f "/etc/lsb-release" ]];
+    then
+        if cat /etc/lsb-release | grep -q -i "Ubuntu\|Mint"
+        then
+            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian."
+        fi
+    fi
+
     # Assert we're root
     [[ "$(id -u)" == "0" ]] || die "This script must be run as root."
 
