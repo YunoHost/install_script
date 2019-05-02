@@ -30,6 +30,7 @@ border=white,black
 title=white,black
 textbox=white,black
 button=black,white
+compactbutton=white,black
 '
 
 ###############################################################################
