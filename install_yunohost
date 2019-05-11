@@ -475,6 +475,7 @@ function install_yunohost_packages() {
     # Install YunoHost
     apt_get_wrapper \
         -o Dpkg::Options::="--force-confold" \
+        -o APT::install-recommends=true      \
         -y --force-yes install               \
         yunohost yunohost-admin postfix      \
     || return 1
