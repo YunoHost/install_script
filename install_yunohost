@@ -135,6 +135,7 @@ function main()
 
 function build_packages_locally()
 {
+    apt install make -y
     mkdir -p /ynh-build/
     cp ./Makefile ./debconf /ynh-build/
     cd /ynh-build
