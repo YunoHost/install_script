@@ -104,12 +104,15 @@ function main()
     step confirm_installation          || die "Installation cancelled at your request"
     step manage_sshd_config            || die "Error caught during sshd management"
     step fix_locales                   # do not die for a failure here, it's minor
-    step setup_package_source          || die "Setting up deb package sources failed"
-    step apt_update                    || die "Error caught during 'apt-get update'"
-    step register_debconf              || die "Unable to insert new values into debconf database"
-    step workarounds_because_sysadmin_sucks || die "Unable to run stupid workarounds"
-    step install_yunohost_packages     || die "Installation of Yunohost packages failed"
-    step restart_services              || die "Error caught during services restart"
+    step build_packages_locally        || die "Failed to build packages locally"
+    step install_local_packages        || die "Failed to install local packages"
+    # The following steps rely on having a real deb repo, which we don't have for now
+    #step setup_package_source          || die "Setting up deb package sources failed"
+    #step apt_update                    || die "Error caught during 'apt-get update'"
+    #step register_debconf              || die "Unable to insert new values into debconf database"
+    #step workarounds_because_sysadmin_sucks || die "Unable to run stupid workarounds"
+    #step install_yunohost_packages     || die "Installation of Yunohost packages failed"
+    #step restart_services              || die "Error caught during services restart"
 
     if is_raspbian ; then
         step del_user_pi     || die "Unable to delete user pi"
@@ -128,6 +131,22 @@ function main()
     success "YunoHost installation completed !"
     conclusion
     exit 0
+}
+
+function build_packages_locally()
+{
+    mkdir -p /ynh-build/
+    cp ./Makefile ./debconf /ynh-build/
+    cd /ynh-build
+    make init
+    make metronome
+    make yunohost
+}
+
+function install_local_packages()
+{
+    cd /ynh-build
+    make install
 }
 
 ###############################################################################
@@ -214,10 +233,10 @@ function check_assertions()
     # only to check this...
     [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 9 (Stretch)."
 
-    # Assert we're on Stretch
+    # Assert we're on Buster
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ "$(cat /etc/debian_version)" =~ ^9.* ]] || die "YunoHost is only available for the version 9 (Stretch) of Debian, you are using '$(cat /etc/debian_version)'."
+    [[ "$(cat /etc/debian_version)" =~ ^10.* ]] || die "This script can only be ran on Debian Buster, you are using '$(cat /etc/debian_version)."
 
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
@@ -392,7 +411,7 @@ function setup_package_source() {
 
     # Debian repository
 
-    local CUSTOMDEB="deb http://forge.yunohost.org/debian/ stretch stable"
+    local CUSTOMDEB="deb http://forge.yunohost.org/debian/ buster stable"
 
     if [[ "$DISTRIB" == "stable" ]] ; then
         echo "$CUSTOMDEB" > $CUSTOMAPT
