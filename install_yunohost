@@ -209,19 +209,19 @@ function check_assertions()
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian."
+    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 9 (Stretch)."
 
     # Assert we're on Stretch
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ "$(cat /etc/debian_version)" =~ ^9.* ]] || die "This script can only be ran on Debian Stretch."
+    [[ "$(cat /etc/debian_version)" =~ ^9.* ]] || die "YunoHost is only available for the version 9 (Stretch) of Debian, you are using '$(cat /etc/debian_version)'."
 
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
         if cat /etc/lsb-release | grep -q -i "Ubuntu\|Mint"
         then
-            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian."
+            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 9 (Stretch)."
         fi
     fi
 
