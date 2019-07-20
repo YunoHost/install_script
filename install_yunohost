@@ -472,6 +472,15 @@ function install_yunohost_packages() {
     # We need to make it mutable for the resolvconf dependency to be installed
     chattr -i /etc/resolv.conf 2>/dev/null || true
 
+    # Install those damn deps independently ...
+    # otherwise they make the install crash for random reasons ~.~
+    # c.f. https://github.com/YunoHost/issues/issues/1382
+    apt_get_wrapper \
+	    -o Dpkg::Options::="--force-confold" \
+            -y --force-yes install               \
+	    debhelper dh-autoreconf              \
+      || true
+
     # Install YunoHost
     apt_get_wrapper \
         -o Dpkg::Options::="--force-confold" \
