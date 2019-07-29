@@ -369,7 +369,7 @@ Do you agree to let YunoHost apply those changes to your configuration and there
     [[ "$sshd_config_possible_issues" == "0" ]] && return 0
 
     # Otherwise, we ask the user to confirm
-    if ! whiptail --title "SSH Configuration" --yesno "$text" 20 78 --defaultno --scrolltext ; then
+    if ! whiptail --title "SSH Configuration" --yesno "$text" 20 78 --defaultno ; then
 
         # Keep a copy to be restored during the postinstall
         # so that the ssh confs behaves as manually modified.
