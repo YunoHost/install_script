@@ -1,29 +1,57 @@
-BUILD_DEPS = dh-systemd dh-python python-all python-yaml python-psutil gdebi git git-buildpackage lua5.1 liblua5.1-dev libidn11-dev libssl-dev txt2man quilt postfix
+# YUNoHost locations
+YNH_BUILD_DIR = /ynh-build/
+YNH_SOURCE = https://github.com/yunohost
 
-.PHONY: init metronome ssowat moulinette yunohost install uninstall
+BUILD_DEPS = git git-buildpackage postfix python-setuptools
+APT_OPTS = -o Dpkg::Options::="--force-confold" -y #--force-yes
+
+.PHONY: init metronome ssowat moulinette yunohost install uninstall mrproper
 
 init:
-	apt -o Dpkg::Options::="--force-confold" -y --force-yes install $(BUILD_DEPS)
-	mkdir -p /ynh-build/
-	cd /ynh-build/; git clone https://github.com/yunohost/moulinette;
-	cd /ynh-build/; git clone https://github.com/yunohost/ssowat;
-	cd /ynh-build/; git clone https://github.com/yunohost/metronome;
-	cd /ynh-build/; git clone https://github.com/yunohost/yunohost;
+	apt $(APT_OPTS) install $(BUILD_DEPS)
+	mkdir -p "$(YNH_BUILD_DIR)"
+	cd "$(YNH_BUILD_DIR)"; \
+		git clone "$(YNH_SOURCE)"/moulinette; \
+		git clone "$(YNH_SOURCE)"/ssowat; \
+		git clone "$(YNH_SOURCE)"/metronome; \
+		git clone "$(YNH_SOURCE)"/yunohost;
+	apt $(APT_OPTS) build-dep \
+		"$(YNH_BUILD_DIR)"/moulinette \
+		"$(YNH_BUILD_DIR)"/ssowat \
+		"$(YNH_BUILD_DIR)"/metronome \
+		"$(YNH_BUILD_DIR)"/yunohost
 
 metronome:
-	cd /ynh-build/; rm -f metronome_*; cd metronome; dpkg-buildpackage -rfakeroot -uc -b -d 
+	cd "$(YNH_BUILD_DIR)"; \
+		rm -f metronome_*; \
+		cd metronome; \
+		dpkg-buildpackage -rfakeroot -uc -b -d
 
 ssowat:
-	cd /ynh-build/; rm -f ssowat_*; cd ssowat; debuild -us -uc
+	cd "$(YNH_BUILD_DIR)"; \
+		rm -f ssowat_*; \
+		cd ssowat; \
+		debuild -us -uc
 
 moulinette:
-	cd /ynh-build/; rm -f moulinette_*; cd moulinette; debuild -us -uc
+	cd "$(YNH_BUILD_DIR)"; \
+		rm -f moulinette_*; \
+		cd moulinette; \
+		debuild -us -uc
 
 yunohost:
-	cd /ynh-build/; rm -f yunohost_*; cd yunohost; debuild -us -uc
+	cd "$(YNH_BUILD_DIR)"; \
+		rm -f yunohost_*; \
+		cd yunohost; \
+		debuild -us -uc
 
 install:
-	cd /ynh-build/; debconf-set-selections < debconf; export SUDO_FORCE_REMOVE=yes; gdebi /ynh-build/metronome*.deb -n; gdebi /ynh-build/moulinette*.deb -n; gdebi /ynh-build/ssowat*.deb -n; gdebi /ynh-build/yunohost*.deb -n
+	cd "$(YNH_BUILD_DIR)"; \
+		debconf-set-selections < debconf; \
+		SUDO_FORCE_REMOVE=yes apt install $(APT_OPTS) /ynh-build/*.deb;
+
+mrproper:
+	@ rm "$(YNH_BUILD_DIR)" -rfv
 
 uninstall:
 	apt remove slapd yunohost moulinette --purge -y
