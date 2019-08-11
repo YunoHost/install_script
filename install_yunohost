@@ -107,7 +107,7 @@ function main()
     step setup_package_source          || die "Setting up deb package sources failed"
     step apt_update                    || die "Error caught during 'apt-get update'"
     step register_debconf              || die "Unable to insert new values into debconf database"
-    step workaround_avahi_installation || die "Unable to install workaround for avahi installation"
+    step workarounds_because_sysadmin_sucks || die "Unable to run stupid workarounds"
     step install_yunohost_packages     || die "Installation of Yunohost packages failed"
     step restart_services              || die "Error caught during services restart"
 
@@ -423,7 +423,7 @@ postsrsd postsrsd/domain string yunohost.org
 EOF
 }
 
-function workaround_avahi_installation() {
+function workarounds_because_sysadmin_sucks() {
 
     # When attempting several installation of Yunohost on the same host
     # with a light VM system like LXC
@@ -461,6 +461,15 @@ function workaround_avahi_installation() {
         --home /var/run/avahi-daemon --no-create-home \
         --gecos "Avahi mDNS daemon" --group avahi     \
         --uid $avahi_id
+        
+    # ######################## #
+    # Workarounds for fail2ban #
+    # ######################## #
+    
+    # We need to create auth.log in case it does not exists, because in some situation, 
+    # this file does not exists, fail2ban will miserably fail to start because
+    # the default fail2ban jail include the sshd jail ... >.>
+    touch /var/log/auth.log 
 }
 
 function install_yunohost_packages() {
