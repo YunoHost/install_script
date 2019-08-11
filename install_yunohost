@@ -425,6 +425,19 @@ EOF
 
 function workarounds_because_sysadmin_sucks() {
 
+    # ######################## #
+    # Workarounds for fail2ban #
+    # ######################## #
+    
+    # We need to create auth.log in case it does not exists, because in some situation, 
+    # this file does not exists, fail2ban will miserably fail to start because
+    # the default fail2ban jail include the sshd jail ... >.>
+    touch /var/log/auth.log 
+
+    # ######################## #
+    # Workarounds for avahi    #
+    # ######################## #
+
     # When attempting several installation of Yunohost on the same host
     # with a light VM system like LXC
     # we hit a bug with avahi-daemon postinstallation
@@ -461,15 +474,7 @@ function workarounds_because_sysadmin_sucks() {
         --home /var/run/avahi-daemon --no-create-home \
         --gecos "Avahi mDNS daemon" --group avahi     \
         --uid $avahi_id
-        
-    # ######################## #
-    # Workarounds for fail2ban #
-    # ######################## #
-    
-    # We need to create auth.log in case it does not exists, because in some situation, 
-    # this file does not exists, fail2ban will miserably fail to start because
-    # the default fail2ban jail include the sshd jail ... >.>
-    touch /var/log/auth.log 
+
 }
 
 function install_yunohost_packages() {
