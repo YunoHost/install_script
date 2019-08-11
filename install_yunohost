@@ -259,7 +259,7 @@ function upgrade_system() {
     # perl is yolomacnuggets :|
     # Stuff like "Can't locate object method "new" via package "Text::Iconv""
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y --force-yes install               \
+                    -y --allow-change-held-packages install               \
                     libtext-iconv-perl                   \
     || return 1
 
@@ -278,7 +278,7 @@ function upgrade_system() {
 
     if is_raspbian ; then
         apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                        -y --force-yes install rpi-update \
+                        -y --allow-change-held-packages install rpi-update \
         || return 3
 
     	if [[ "$BUILD_IMAGE" != "1" ]] ; then
@@ -299,7 +299,7 @@ function install_script_dependencies() {
 
     apt_update
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y --force-yes install               \
+                    -y --allow-change-held-packages install \
                     $DEPENDENCIES                        \
       || return 1
 }
@@ -477,7 +477,7 @@ function install_yunohost_packages() {
     # c.f. https://github.com/YunoHost/issues/issues/1382
     apt_get_wrapper \
 	    -o Dpkg::Options::="--force-confold" \
-            -y --force-yes install               \
+            -y --allow-change-held-packages install               \
 	    debhelper dh-autoreconf              \
       || true
 
@@ -485,7 +485,7 @@ function install_yunohost_packages() {
     apt_get_wrapper \
         -o Dpkg::Options::="--force-confold" \
         -o APT::install-recommends=true      \
-        -y --force-yes install               \
+        -y --allow-change-held-packages install               \
         yunohost yunohost-admin postfix      \
     || return 1
 }
