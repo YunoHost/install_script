@@ -140,6 +140,8 @@ function build_packages_locally()
     cp ./Makefile ./debconf /ynh-build/
     cd /ynh-build
     make init
+    make moulinette
+    make ssowat
     make metronome
     make yunohost
 }
