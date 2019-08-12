@@ -240,6 +240,10 @@ function check_assertions()
         user_pi_logged_out || die "The user pi should be logged out."
     fi
 
+    # Check we aren't running in docker or other weird containers that we can't probably install on
+    systemd-detect-virt | grep -v -q -w "docker\|container-other" || [[ "$FORCE" == "1" ]]
+        || die "It seems like you are trying to install YunoHost in docker or a weird container technology which probably is not supported by this install script (or YunoHost as a whole). If you know what you are doing, you can run this script with -f."
+
     # Check possible conflict with apache, bind9.
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "1" ]] \
         || die "Bind9 is installed and might conflict with dnsmasq. Uninstall it first, or if you know what you are doing, run this script with -f."
