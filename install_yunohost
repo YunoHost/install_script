@@ -517,6 +517,9 @@ function restart_services() {
 function fix_locales() {
     # This function tries to fix the whole locale and perl mess about missing locale files
     
+    # Install 'locales' if locale-gen does not exists yet
+    command -v locale-gen > /dev/null || apt_get_wrapper -o Dpkg::Options::="--force-confold" -y install locales
+    
     # Generate at least en_US.UTF-8
     sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && locale-gen
     
