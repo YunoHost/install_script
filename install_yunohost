@@ -246,10 +246,10 @@ function check_assertions()
 
     # Check possible conflict with apache, bind9.
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "1" ]] \
-        || die "Bind9 is installed and might conflict with dnsmasq. Uninstall it first, or if you know what you are doing, run this script with -f."
+        || die "Bind9 is installed and might conflict with dnsmasq. Uninstall it first using 'apt remove bind9 --purge', or if you know what you are doing, run this script with -f."
 
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2\s')" ]] || [[ "$FORCE" == "1" ]] \
-        || die "Apache is installed and might conflict with nginx. Uninstall it first, or if you know what you are doing, run this script with -f."
+        || die "Apache is installed and might conflict with nginx. Uninstall it first using 'apt remove apache2 --purge', or if you know what you are doing, run this script with -f."
 
 }
 
