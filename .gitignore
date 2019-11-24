@@ -15,3 +15,6 @@
 *.save
 *.autosav
 *.autosave
+junit-*.xml
+.kitchen
+tests/__pycache__/
