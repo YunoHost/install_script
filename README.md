@@ -35,6 +35,27 @@ The [post-installation](https://yunohost.org/#/postinstall) will need to be perf
 
 The ```-d <DISTRIB>``` switch is mostly for advanced users who want to install the bleeding edge versions of YunoHost packages.
 
+## Test with Kitchen
+
+To launch tests and an development environment : 
+
+* install VirtualBox https://www.virtualbox.org/
+* install Vagrant https://www.vagrantup.com/
+* install Kitchen https://kitchen.ci/
+* install testinfra with paramiko https://testinfra.readthedocs.io/
+
+Run : 
+
+```
+kitchen test
+```
+
+To login to your environment : 
+
+```
+kitchen login
+```
+
 ## Issues, Feedback
 
 Please report issues here : https://github.com/YunoHost/issues/issues

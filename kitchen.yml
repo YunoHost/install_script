@@ -1,0 +1,24 @@
+---
+driver:
+  name: vagrant
+  synced_folders:    
+     - [".", "/vagrant"]
+  network: 
+     - ["forwarded_port", {guest: 80, host: 8080}]
+     - ["forwarded_port", {guest: 443, host: 8443}]
+
+provisioner:
+  name: shell
+
+verifier:
+  name: inspec
+
+platforms:
+  - name: debian/buster64
+
+suites:
+  - name: default
+
+verifier:
+  name: shell
+  command: py.test --hosts="paramiko://${KITCHEN_USERNAME}@${KITCHEN_HOSTNAME}:${KITCHEN_PORT}?ssh_identity_file=${KITCHEN_SSH_KEY}" --junit-xml "junit-${KITCHEN_INSTANCE}.xml" "tests/"
