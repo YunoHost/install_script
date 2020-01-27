@@ -110,7 +110,7 @@ function main()
     #step setup_package_source          || die "Setting up deb package sources failed"
     #step apt_update                    || die "Error caught during 'apt-get update'"
     #step register_debconf              || die "Unable to insert new values into debconf database"
-    #step workaround_avahi_installation || die "Unable to install workaround for avahi installation"
+    #step workarounds_because_sysadmin_sucks || die "Unable to run stupid workarounds"
     #step install_yunohost_packages     || die "Installation of Yunohost packages failed"
     #step restart_services              || die "Error caught during services restart"
 
@@ -213,7 +213,10 @@ function apt_get_wrapper() {
           --                                           \
           apt-get $*
     else
-        apt-get $* 2>&1 | tee -a $YUNOHOST_LOG
+        # Why we need pipefail : https://stackoverflow.com/a/6872163
+        set -o pipefail
+        apt-get $* 2>&1 | tee -a $YUNOHOST_LOG || return 1
+        set +o pipefail
     fi
 }
 
@@ -231,19 +234,19 @@ function check_assertions()
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian."
+    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 9 (Stretch)."
 
     # Assert we're on Buster
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ "$(cat /etc/debian_version)" =~ ^10.* ]] || die "This script can only be ran on Debian Buster."
+    [[ "$(cat /etc/debian_version)" =~ ^10.* ]] || die "This script can only be ran on Debian Buster, you are using '$(cat /etc/debian_version)."
 
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
         if cat /etc/lsb-release | grep -q -i "Ubuntu\|Mint"
         then
-            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian."
+            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 9 (Stretch)."
         fi
     fi
 
@@ -261,6 +264,10 @@ function check_assertions()
     if is_raspbian ; then
         user_pi_logged_out || die "The user pi should be logged out."
     fi
+
+    # Check we aren't running in docker or other weird containers that we can't probably install on
+    systemd-detect-virt | grep -v -q -w "docker\|container-other" || [[ "$FORCE" == "1" ]] \
+        || die "It seems like you are trying to install YunoHost in docker or a weird container technology which probably is not supported by this install script (or YunoHost as a whole). If you know what you are doing, you can run this script with -f."
 
     # Check possible conflict with apache, bind9.
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "1" ]] \
@@ -281,7 +288,7 @@ function upgrade_system() {
     # perl is yolomacnuggets :|
     # Stuff like "Can't locate object method "new" via package "Text::Iconv""
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y --force-yes install               \
+                    -y install                           \
                     libtext-iconv-perl                   \
     || return 1
 
@@ -300,7 +307,7 @@ function upgrade_system() {
 
     if is_raspbian ; then
         apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                        -y --force-yes install rpi-update \
+                        -y install rpi-update \
         || return 3
 
     	if [[ "$BUILD_IMAGE" != "1" ]] ; then
@@ -321,7 +328,7 @@ function install_script_dependencies() {
 
     apt_update
     apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y --force-yes install               \
+                    -y install                           \
                     $DEPENDENCIES                        \
       || return 1
 }
@@ -391,7 +398,7 @@ Do you agree to let YunoHost apply those changes to your configuration and there
     [[ "$sshd_config_possible_issues" == "0" ]] && return 0
 
     # Otherwise, we ask the user to confirm
-    if ! whiptail --title "SSH Configuration" --yesno "$text" 20 78 --defaultno --scrolltext ; then
+    if ! whiptail --title "SSH Configuration" --yesno "$text" 20 78 --defaultno ; then
 
         # Keep a copy to be restored during the postinstall
         # so that the ssh confs behaves as manually modified.
@@ -445,7 +452,20 @@ postsrsd postsrsd/domain string yunohost.org
 EOF
 }
 
-function workaround_avahi_installation() {
+function workarounds_because_sysadmin_sucks() {
+
+    # ######################## #
+    # Workarounds for fail2ban #
+    # ######################## #
+    
+    # We need to create auth.log in case it does not exists, because in some situation, 
+    # this file does not exists, fail2ban will miserably fail to start because
+    # the default fail2ban jail include the sshd jail ... >.>
+    touch /var/log/auth.log 
+
+    # ######################## #
+    # Workarounds for avahi    #
+    # ######################## #
 
     # When attempting several installation of Yunohost on the same host
     # with a light VM system like LXC
@@ -483,6 +503,7 @@ function workaround_avahi_installation() {
         --home /var/run/avahi-daemon --no-create-home \
         --gecos "Avahi mDNS daemon" --group avahi     \
         --uid $avahi_id
+
 }
 
 function install_yunohost_packages() {
@@ -494,11 +515,20 @@ function install_yunohost_packages() {
     # We need to make it mutable for the resolvconf dependency to be installed
     chattr -i /etc/resolv.conf 2>/dev/null || true
 
+    # Install those damn deps independently ...
+    # otherwise they make the install crash for random reasons ~.~
+    # c.f. https://github.com/YunoHost/issues/issues/1382
+    apt_get_wrapper \
+	    -o Dpkg::Options::="--force-confold" \
+            -y install                           \
+	    debhelper dh-autoreconf              \
+      || true
+
     # Install YunoHost
     apt_get_wrapper \
         -o Dpkg::Options::="--force-confold" \
         -o APT::install-recommends=true      \
-        -y --force-yes install               \
+        -y install                           \
         yunohost yunohost-admin postfix      \
     || return 1
 }
@@ -515,6 +545,9 @@ function restart_services() {
 
 function fix_locales() {
     # This function tries to fix the whole locale and perl mess about missing locale files
+    
+    # Install 'locales' if locale-gen does not exists yet
+    command -v locale-gen > /dev/null || apt_get_wrapper -o Dpkg::Options::="--force-confold" -y install locales
     
     # Generate at least en_US.UTF-8
     sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && locale-gen
