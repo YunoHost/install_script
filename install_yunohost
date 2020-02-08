@@ -56,7 +56,7 @@ Options :
 function parse_options()
 {
     AUTOMODE=0
-    DISTRIB=stable
+    DISTRIB=unstable # FIXME : change this to testing / stable once we move to beta / stable releases...
     BUILD_IMAGE=0
     FORCE=0
 
@@ -212,19 +212,19 @@ function check_assertions()
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 9 (Stretch)."
+    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 10 (Buster)."
 
-    # Assert we're on Stretch
+    # Assert we're on Buster
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ "$(cat /etc/debian_version)" =~ ^9.* ]] || die "YunoHost is only available for the version 9 (Stretch) of Debian, you are using '$(cat /etc/debian_version)'."
+    [[ "$(cat /etc/debian_version)" =~ ^10.* ]] || die "YunoHost is only available for the version 10 (Buster) of Debian, you are using '$(cat /etc/debian_version)'."
 
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
         if cat /etc/lsb-release | grep -q -i "Ubuntu\|Mint"
         then
-            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 9 (Stretch)."
+            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 10 (Buster)."
         fi
     fi
 
@@ -392,7 +392,7 @@ function setup_package_source() {
 
     # Debian repository
 
-    local CUSTOMDEB="deb http://forge.yunohost.org/debian/ stretch stable"
+    local CUSTOMDEB="deb http://forge.yunohost.org/debian/ buster stable"
 
     if [[ "$DISTRIB" == "stable" ]] ; then
         echo "$CUSTOMDEB" > $CUSTOMAPT
@@ -507,8 +507,9 @@ function install_yunohost_packages() {
         -o Dpkg::Options::="--force-confold" \
         -o APT::install-recommends=true      \
         -y install                           \
-        yunohost yunohost-admin postfix      \
+        yunohost postfix                     \
     || return 1
+        #yunohost yunohost-admin postfix      \ # FIXME / TODO : temporarily removed yunohost-admin because build on vinaigrette is broken, to be re-added once it's fixed
 }
 
 function restart_services() {

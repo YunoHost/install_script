@@ -4,13 +4,13 @@
 
 The script `install_yunohost` will install [YunoHost](https://yunohost.org/) on a Debian system.
 
-Only Debian 9/Stretch systems running with kernel >= 3.12 [systemd](https://wiki.debian.org/systemd) - which is generally the default - are supported.
+Only Debian 10/Buster systems running with kernel >= 3.12 [systemd](https://wiki.debian.org/systemd) - which is generally the default - are supported.
 
 ## Basic usage
 
 With a `curl|bash` syntax : 
 
-    $ curl https://raw.githubusercontent.com/YunoHost/install_script/stretch/install_yunohost | bash
+    $ curl https://raw.githubusercontent.com/YunoHost/install_script/buster/install_yunohost | bash
 
 If something goes wrong, you can check the installation logs saved in ```/var/log/yunohost-installation.log```
 
