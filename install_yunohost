@@ -507,9 +507,8 @@ function install_yunohost_packages() {
         -o Dpkg::Options::="--force-confold" \
         -o APT::install-recommends=true      \
         -y install                           \
-        yunohost postfix                     \
+        yunohost yunohost-admin postfix      \
     || return 1
-        #yunohost yunohost-admin postfix      \ # FIXME / TODO : temporarily removed yunohost-admin because build on vinaigrette is broken, to be re-added once it's fixed
 }
 
 function restart_services() {
