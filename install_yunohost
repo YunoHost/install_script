@@ -258,6 +258,16 @@ function check_assertions()
 
 function upgrade_system() {
 
+    # Comment cdrom repository line
+    if grep -E "^deb[[:blank:]]+cdrom:\[Debian.+?stretch[[:blank:]]+main$" /etc/apt/sources.list then
+        sed -i -E "s/^(deb[[:blank:]]+cdrom:\[Debian.+?)stretch[[:blank:]]+main$/\#\1stretch[[:blank:]]main/g" /etc/apt/sources.list
+    fi
+
+    # Add the main repository if it is not already in the sources.list file.
+    if ! grep -E "^deb[[:blank:]]+http://deb.debian.org/debian\/?[[:blank:]]+stretch[[:blank:]]+main$" /etc/apt/sources.list then
+        echo "deb http://deb.debian.org/debian stretch main" >> /etc/apt/sources.list
+    fi
+
     apt_get_wrapper update \
     || return 1
 
