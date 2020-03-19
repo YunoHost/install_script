@@ -388,6 +388,10 @@ Do you agree to let YunoHost apply those changes to your configuration and there
 
 function setup_package_source() {
 
+    # Reset sources.list
+    echo "deb http://deb.debian.org/debian stretch main" > /etc/apt/sources.list
+    echo "deb http://security.debian.org/debian-security stretch/updates main" >> /etc/apt/sources.list
+
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
     # Debian repository
