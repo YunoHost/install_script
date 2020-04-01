@@ -528,11 +528,11 @@ function fix_locales() {
     command -v locale-gen > /dev/null || apt_get_wrapper -o Dpkg::Options::="--force-confold" -y install locales
     
     # Generate at least en_US.UTF-8
-    if grep "en_US.UTF-8" /etc/locale.gen; then
-        sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen
-    else
-        echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
-    fi
+    grep -q "^ *en_US.UTF-8" /etc/locale.gen || echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+    
+    # FIXME: here some day we should try to identify the user's lang from LANG or LC_ALL and generate the appropriate locale ...
+    # (and set this lang as the default in /etc/env 3 lines below)
+    
     locale-gen
     
     # If no /etc/environment exists, default to en_US.UTF-8
