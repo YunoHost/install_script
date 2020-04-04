@@ -249,10 +249,10 @@ function check_assertions()
 
     # Check possible conflict with apache, bind9.
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "1" ]] \
-        || die "Bind9 is installed and might conflict with dnsmasq. Uninstall it first using 'apt remove bind9 --purge --autoremove', or if you know what you are doing, run this script with -f."
+        || die "Bind9 is installed on your system. Yunohost requires to install dnsmasq, which is VERY LIKELY to create conflicts with bind9 and other issues. Please uninstall bind9 first, using 'apt remove bind9 --purge --autoremove'. Or if you REALLY know what you are doing, you can run this script with -f."
 
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2\s')" ]] || [[ "$FORCE" == "1" ]] \
-        || die "Apache is installed and might conflict with nginx. Uninstall it first using 'apt remove apache2 --purge --autoremove', or if you know what you are doing, run this script with -f."
+        || die "Apache is installed on your system. Yunohost requires to install nginx, which is VERY LIKELY to create conflicts with apache2 and other issues. Please uninstall apache2 first, using 'apt remove apache2 --purge --autoremove'. Or if you REALLY know what you are doing, you can run this script with -f."
 
 }
 
