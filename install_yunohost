@@ -119,14 +119,16 @@ function main()
         step clean_image || die "Unable to clean image"
     fi
 
-    if is_raspbian ; then
-        # Reboot should be done before postinstall to be able to run iptables rules
-        reboot
-    fi
-
     info "Installation logs are available in $YUNOHOST_LOG"
     success "YunoHost installation completed !"
     conclusion
+
+    if is_raspbian ; then
+        # Reboot should be done before postinstall to be able to run iptables rules
+        info "Your server will now reboot. Please log back in as root and run the post-install."
+        reboot
+    fi
+
     exit 0
 }
 
@@ -435,11 +437,11 @@ function workarounds_because_sysadmin_sucks() {
     # ######################## #
     # Workarounds for fail2ban #
     # ######################## #
-    
-    # We need to create auth.log in case it does not exists, because in some situation, 
+
+    # We need to create auth.log in case it does not exists, because in some situation,
     # this file does not exists, fail2ban will miserably fail to start because
     # the default fail2ban jail include the sshd jail ... >.>
-    touch /var/log/auth.log 
+    touch /var/log/auth.log
 
     # ######################## #
     # Workarounds for avahi    #
@@ -512,10 +514,12 @@ function install_yunohost_packages() {
 }
 
 function restart_services() {
-    service slapd restart
-#    service yunohost-firewall start
-    service unscd restart
-    service nslcd restart
+    systemctl daemon-reload
+
+    systemctl restart slapd
+    # systemctl restart yunohost-firewall
+    systemctl restart unscd
+    systemctl restart nslcd
 
     # NOTE : We don't fail if slapd fails to restart...
     return 0
@@ -523,13 +527,13 @@ function restart_services() {
 
 function fix_locales() {
     # This function tries to fix the whole locale and perl mess about missing locale files
-    
+
     # Install 'locales' if locale-gen does not exists yet
     command -v locale-gen > /dev/null || apt_get_wrapper -o Dpkg::Options::="--force-confold" -y install locales
-    
+
     # Generate at least en_US.UTF-8
     sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && locale-gen
-    
+
     # If no /etc/environment exists, default to en_US.UTF-8
     [ "$(grep LC_ALL /etc/environment)" ] || echo 'LC_ALL="en_US.UTF-8"' >> /etc/environment
     source /etc/environment
