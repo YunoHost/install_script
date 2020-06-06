@@ -219,7 +219,7 @@ function check_assertions()
     # only to check this...
     [[ "$(cat /etc/debian_version)" =~ ^10.* ]] || die "YunoHost is only available for the version 10 (Buster) of Debian, you are using '$(cat /etc/debian_version)'."
 
-    [[ "$DISTRIB" != "testing" ]] || die "Yunohost support for Buster is still in alpha testing stage - meaning you should expect epic bugs and this is NOT suited for deployment in production. It is ONLY intended for users willing to participate in alpha testing and report issues found. DO NOT USE FOR PRODUCTION ENVIRONMENT. If you agree with this, you should call this script with -d testing."
+    [[ "$DISTRIB" == "testing" ]] || die "Yunohost support for Buster is still in alpha testing stage - meaning you should expect epic bugs and this is NOT suited for deployment in production. It is ONLY intended for users willing to participate in alpha testing and report issues found. DO NOT USE FOR PRODUCTION ENVIRONMENT. If you agree with this, you should call this script with -d testing."
 
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
