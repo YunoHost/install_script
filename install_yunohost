@@ -56,7 +56,7 @@ Options :
 function parse_options()
 {
     AUTOMODE=0
-    DISTRIB=unstable # FIXME : change this to testing / stable once we move to beta / stable releases...
+    DISTRIB=stable
     BUILD_IMAGE=0
     FORCE=0
 
@@ -219,6 +219,8 @@ function check_assertions()
     # only to check this...
     [[ "$(cat /etc/debian_version)" =~ ^10.* ]] || die "YunoHost is only available for the version 10 (Buster) of Debian, you are using '$(cat /etc/debian_version)'."
 
+    [[ "$DISTRIB" != "testing" ]] || die "Yunohost support for Buster is still in alpha testing stage - meaning you should expect epic bugs and this is NOT suited for deployment in production. It is ONLY intended for users willing to participate in alpha testing and report issues found. DO NOT USE FOR PRODUCTION ENVIRONMENT. If you agree with this, you should call this script with -d testing."
+
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
@@ -249,10 +251,10 @@ function check_assertions()
 
     # Check possible conflict with apache, bind9.
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "1" ]] \
-        || die "Bind9 is installed on your system. Yunohost requires to install dnsmasq, which is VERY LIKELY to create conflicts with bind9 and other issues. Please uninstall bind9 first, using 'apt remove bind9 --purge --autoremove'. Or if you REALLY know what you are doing, you can run this script with -f."
+        || die "Bind9 is installed on your system. Yunohost conflicts with Bind9 because it requires dnsmasq. To be able to run this script, you should first run 'apt remove bind9 --purge --autoremove'."
 
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2\s')" ]] || [[ "$FORCE" == "1" ]] \
-        || die "Apache is installed on your system. Yunohost requires to install nginx, which is VERY LIKELY to create conflicts with apache2 and other issues. Please uninstall apache2 first, using 'apt remove apache2 --purge --autoremove'. Or if you REALLY know what you are doing, you can run this script with -f."
+        || die "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To be able to run this script, you should first run 'apt remove apache2 --purge --autoremove'."
 
 }
 
