@@ -417,8 +417,6 @@ slapd	slapd/invalid_config	boolean	true
 slapd	slapd/backend	select	MDB
 postfix postfix/main_mailer_type        select Internet Site
 postfix postfix/mailname string /etc/mailname
-mariadb-server-10.3 mysql-server/root_password password yunohost
-mariadb-server-10.3 mysql-server/root_password_again password yunohost
 nslcd	nslcd/ldap-bindpw	password
 nslcd	nslcd/ldap-starttls	boolean	false
 nslcd	nslcd/ldap-reqcert	select
