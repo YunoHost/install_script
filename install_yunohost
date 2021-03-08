@@ -212,19 +212,22 @@ function check_assertions()
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 10 (Buster)."
+    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 11 (Bullseye)."
 
-    # Assert we're on Buster
+    # Assert we're on Bullseye
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ "$(cat /etc/debian_version)" =~ ^10.* ]] || die "YunoHost is only available for the version 10 (Buster) of Debian, you are using '$(cat /etc/debian_version)'."
+    # TODO: remove the line with "bullseye/sid"
+    [[ "$(cat /etc/debian_version)" =~ ^11.* ]] \
+    || [[ "$(cat /etc/debian_version)" =~ "bullseye/sid" ]] \
+    || die "YunoHost is only available for the version 11 (Bullseye) of Debian, you are using '$(cat /etc/debian_version)'."
 
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
         if cat /etc/lsb-release | grep -q -i "Ubuntu\|Mint"
         then
-            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 10 (Buster)."
+            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 11 (Bullseye)."
         fi
     fi
 
@@ -392,7 +395,7 @@ function setup_package_source() {
 
     # Debian repository
 
-    local CUSTOMDEB="deb http://forge.yunohost.org/debian/ buster stable"
+    local CUSTOMDEB="deb http://forge.yunohost.org/debian/ bullseye stable"
 
     if [[ "$DISTRIB" == "stable" ]] ; then
         echo "$CUSTOMDEB" > $CUSTOMAPT
