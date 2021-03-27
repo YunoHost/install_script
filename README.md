@@ -10,7 +10,7 @@ Only Debian 10/Buster systems running with kernel >= 3.12 [systemd](https://wiki
 
 With a `curl|bash` syntax : 
 
-    $ curl https://raw.githubusercontent.com/YunoHost/install_script/buster-unstable/install_yunohost | bash
+    $ curl https://raw.githubusercontent.com/YunoHost/install_script/buster/install_yunohost | bash
 
 If something goes wrong, you can check the installation logs saved in ```/var/log/yunohost-installation.log```
 
