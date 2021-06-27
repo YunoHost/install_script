@@ -258,6 +258,10 @@ function check_assertions()
 
 function upgrade_system() {
 
+    # Some VPS don't have debconf install, therefore don't have debconf-apt-progress...
+    # c.f. https://github.com/YunoHost/issues/issues/1828
+    dpkg --list | grep -q '^ii  debconf ' || { apt update; apt install debconf; }
+
     apt_get_wrapper update \
     || return 1
 
