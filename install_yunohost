@@ -300,7 +300,7 @@ function upgrade_system() {
 
 function install_script_dependencies() {
     # dependencies of the install script itself
-    local DEPENDENCIES="lsb-release wget whiptail gnupg apt-transport-https"
+    local DEPENDENCIES="lsb-release whiptail gnupg apt-transport-https"
 
     if [[ "$AUTOMODE" == "0" ]] ;
     then
@@ -395,7 +395,7 @@ function setup_package_source() {
 
     # Debian repository
 
-    local CUSTOMDEB="deb http://forge.yunohost.org/debian/ bullseye stable"
+    local CUSTOMDEB="deb [signed-by=/usr/share/keyrings/yunohost-archive-keyring.gpg] http://forge.yunohost.org/debian/ bullseye stable"
 
     if [[ "$DISTRIB" == "stable" ]] ; then
         echo "$CUSTOMDEB" > $CUSTOMAPT
@@ -406,7 +406,8 @@ function setup_package_source() {
     fi
 
     # Add YunoHost repository key to the keyring
-    wget -O- https://forge.yunohost.org/yunohost.asc -q | apt-key add -qq - >/dev/null 2>&1
+    curl --fail --silent https://forge.yunohost.org/yunohost.asc | gpg --dearmor > /usr/share/keyrings/yunohost-archive-keyring.gpg
+    apt-get -qq update
 }
 
 function register_debconf() {
