@@ -228,11 +228,10 @@ function check_assertions()
         fi
     fi
 
-    
     # Assert we're root
     [[ "$(id -u)" == "0" ]] || die "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."
 
-    # Assert we're root
+    # Check PATH var
     [[ "$PATH" == *"/sbin"* ]] || die "Your environment PATH variable must contains /sbin directory."
     
     # Assert systemd is installed
