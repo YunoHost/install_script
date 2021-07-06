@@ -228,9 +228,13 @@ function check_assertions()
         fi
     fi
 
+    
     # Assert we're root
     [[ "$(id -u)" == "0" ]] || die "This script must be run as root. On most setups, typing 'sudo -i' can be used to become root."
 
+    # Assert we're root
+    [[ "$PATH" == *"/sbin"* ]] || die "Your environment PATH variable must contains /sbin directory."
+    
     # Assert systemd is installed
     command -v systemctl > /dev/null || die "YunoHost requires systemd to be installed."
 
