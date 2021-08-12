@@ -254,6 +254,12 @@ function check_assertions()
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2\s')" ]] || [[ "$FORCE" == "1" ]] \
         || die "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To be able to run this script, you should first run 'apt remove apache2 --purge --autoremove'."
 
+    # Workaround for fail2ban:
+    # We need to create auth.log in case it does not exists, because in some situation, 
+    # this file does not exists, fail2ban will miserably fail to start because
+    # the default fail2ban jail include the sshd jail ... >.>
+    touch /var/log/auth.log 
+
 }
 
 function upgrade_system() {
@@ -442,48 +448,6 @@ function workarounds_because_sysadmin_sucks() {
     # this file does not exists, fail2ban will miserably fail to start because
     # the default fail2ban jail include the sshd jail ... >.>
     touch /var/log/auth.log 
-
-    # ######################## #
-    # Workarounds for avahi    #
-    # ######################## #
-
-    # When attempting several installation of Yunohost on the same host
-    # with a light VM system like LXC
-    # we hit a bug with avahi-daemon postinstallation
-    # This is described in detail in https://github.com/lxc/lxc/issues/25
-    #
-    # It makes the configure step of avahi-daemon fail, because the service does
-    # start correctly. Then all other packages depending on avahi-daemon refuse to
-    # configure themselves.
-    #
-    # The workaround we use is to generate a random uid for the avahi user, and
-    # create the user with this id beforehand, so that the avahi-daemon postinst
-    # script does not do it on its own. Our randomized uid has far less chances to
-    # be already in use in another system than the automated one (which tries to use
-    # consecutive uids).
-
-    # Return without error if avahi already exists
-    if id avahi > /dev/null 2>&1 ; then
-        info "User avahi already exists (with uid $(id avahi)), skipping avahi workaround"
-        return 0
-    fi
-
-    # Get a random unused uid between 500 and 999 (system-user)
-    local avahi_id=$((500 + RANDOM % 500))
-    while cut -d ':' -f 3 /etc/passwd | grep -q $avahi_id ;
-    do
-        avahi_id=$((500 + RANDOM % 500))
-    done
-
-    info "Workaround for avahi : creating avahi user with uid $avahi_id"
-
-    # Use the same adduser parameter as in the avahi-daemon postinst script
-    # Just specify --uid explicitely
-    adduser --disabled-password  --quiet --system     \
-        --home /var/run/avahi-daemon --no-create-home \
-        --gecos "Avahi mDNS daemon" --group avahi     \
-        --uid $avahi_id
-
 }
 
 function install_yunohost_packages() {
