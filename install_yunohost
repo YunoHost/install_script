@@ -406,7 +406,7 @@ function setup_package_source() {
     fi
 
     # Add YunoHost repository key to the keyring
-    wget -O- https://forge.yunohost.org/yunohost.asc -q | apt-key add -qq - >/dev/null 2>&1
+    wget -O- https://forge.yunohost.org/yunohost_bullseye.asc -q | apt-key add -qq - >/dev/null 2>&1
 }
 
 function register_debconf() {
