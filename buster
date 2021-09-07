@@ -261,6 +261,8 @@ function upgrade_system() {
     # Some VPS don't have debconf install, therefore don't have debconf-apt-progress...
     # c.f. https://github.com/YunoHost/issues/issues/1828
     dpkg --list | grep -q '^ii  debconf ' || { apt update --allow-releaseinfo-change; apt install debconf; }
+    # also dialog ... https://github.com/YunoHost/doc/pull/1739
+    dpkg --list | grep -q '^ii  dialog ' || { apt update --allow-releaseinfo-change; apt install dialog; }
 
     apt_get_wrapper update --allow-releaseinfo-change \
     || return 1
