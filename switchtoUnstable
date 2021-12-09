@@ -1,0 +1,19 @@
+echo "----"
+echo "Patching sources.list to enable testing repository..."
+echo "----"
+for FILE in `ls /etc/apt/sources.list /etc/apt/sources.list.d/*`
+do
+    # (Append 'testing' at the end of lines starting with the yunohost repo..)
+    sed -i 's@^deb http://forge.yunohost.org.*@& testing unstable@' $FILE
+done
+
+echo "----"
+echo "Running 'apt-get update'"
+echo "----"
+apt-get update
+
+echo "----"
+echo "Running 'apt-get dist-upgrade'"
+echo "----"
+apt-get dist-upgrade -y
+
