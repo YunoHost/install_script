@@ -507,12 +507,19 @@ function install_yunohost_packages() {
 	    debhelper dh-autoreconf              \
       || true
 
+    # Explicitly install these so they get flagged as manually installed
+    # At some point we may want to start trying to not install these by default
+    # To have lighter systems
+    # But that assumes that app explicitly declare their dependencies
+    recommend_packages="php7.4-fpm mariadb-server metronome"
+
     # Install YunoHost
     apt_get_wrapper \
         -o Dpkg::Options::="--force-confold" \
         -o APT::install-recommends=true      \
         -y install                           \
         yunohost yunohost-admin postfix      \
+        $recommend_packages                  \
     || return 1
 }
 
