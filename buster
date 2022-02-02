@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2015-2020 YunoHost
+# Copyright (C) 2015-2021 YunoHost
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -233,6 +233,12 @@ function check_assertions()
 
     # Assert systemd is installed
     command -v systemctl > /dev/null || die "YunoHost requires systemd to be installed."
+
+    if [[ $(cat /sys/module/ipv6/parameters/disable) == "1" ]];
+    then
+    	warn "We had to remove IPV6 from /etc/redis/redis.conf"
+    	sed -i 's/::1//g' /etc/redis/redis.conf
+    fi
 
     # Check that kernel is >= 3.12, otherwise systemd won't work properly. Cf. https://github.com/systemd/systemd/issues/5236#issuecomment-277779394
     dpkg --compare-versions "$(uname -r)" "ge" "3.12" || die "YunoHost requires a kernel >= 3.12. Please consult your hardware documentation or VPS provider to learn how to upgrade your kernel."
