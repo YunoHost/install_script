@@ -410,7 +410,7 @@ function setup_package_source() {
     fi
 
     # Add YunoHost repository key to the keyring
-    curl --fail --silent https://forge.yunohost.org/yunohost.asc | gpg --dearmor > /usr/share/keyrings/yunohost-archive-keyring.gpg
+    curl --fail --silent https://forge.yunohost.org/yunohost_bullseye.asc | gpg --dearmor > /usr/share/keyrings/yunohost-archive-keyring.gpg
     apt-get -qq update
 }
 
