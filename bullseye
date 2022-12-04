@@ -234,6 +234,9 @@ function check_assertions()
     # Assert we're root
     [[ "$(id -u)" == "0" ]] || die "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."
 
+    # Check PATH var
+    [[ "$PATH" == *"/sbin"* ]] || die "Your environment PATH variable must contains /sbin directory. Maybe try running 'PATH=/sbin:\$PATH' to fix this."
+
     # Assert systemd is installed
     command -v systemctl > /dev/null || die "YunoHost requires systemd to be installed."
 
@@ -304,7 +307,7 @@ function upgrade_system() {
 
 function install_script_dependencies() {
     # dependencies of the install script itself
-    local DEPENDENCIES="lsb-release whiptail gnupg apt-transport-https"
+    local DEPENDENCIES="lsb-release whiptail gnupg apt-transport-https adduser"
 
     if [[ "$AUTOMODE" == "0" ]] ;
     then
