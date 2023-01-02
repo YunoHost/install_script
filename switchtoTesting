@@ -4,7 +4,7 @@ echo "----"
 for FILE in `ls /etc/apt/sources.list /etc/apt/sources.list.d/*`
 do
     # (Append 'testing' at the end of lines starting with the yunohost repo..)
-    sed -i 's@^deb http://forge.yunohost.org.*@& testing@' $FILE
+    sed -i 's@^deb .* http://forge.yunohost.org.*@& testing@' $FILE
 done
 
 echo "----"
