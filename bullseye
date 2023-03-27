@@ -533,7 +533,9 @@ function restart_services() {
     service unscd restart
     service nslcd restart
 
-    # NOTE : We don't fail if slapd fails to restart...
+    # For some reason sometimes dbus is not properly started/enabled ...
+    systemctl is-active dbus >/dev/null || systemctl enable dbus --now
+
     return 0
 }
 
