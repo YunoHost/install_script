@@ -520,7 +520,7 @@ function install_yunohost_packages() {
         -o Dpkg::Options::="--force-confold" \
         -o APT::install-recommends=true      \
         -y install                           \
-        yunohost postfix                     \
+        yunohost yunohost-admin postfix      \
     || return 1
     # FIXME : re-add yunohost-admin once it's built for bookworm
 }
