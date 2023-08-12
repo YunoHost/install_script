@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# RUN INSTALL SCRIPT WITH -a FOR NON-INTERACTIVE MODE.
+
 set -u
 
 # Globals
@@ -25,6 +27,18 @@ export DEBIAN_FRONTEND=noninteractive
 ###############################################################################
 # Main functions                                                              #
 ###############################################################################
+
+function check_connection() {
+        TIMEOUT=$1
+
+        while [ $TIMEOUT -gt 0 ]; do
+                ping -c 1 -W 2 yunohost.org 2>&1 >/dev/null && return 0
+                sleep 1
+                TIMEOUT=$((TIMEOUT-1))
+        done
+
+        return 1
+}
 
 function usage() {
   cat << EOF
@@ -251,6 +265,16 @@ function check_assertions()
 
     # Assert we're root
     [[ "$(id -u)" == "0" ]] || { error "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."; return 1; }
+
+    # Assert Internet is reachable
+    if ! check_connection 30; then
+        die "You need internet to use this script! yunohost.org did not respond to ping after more than 30s."
+    fi
+
+    # Assert curl is setup
+    if ! command -v curl 2>&1 >/dev/null; then
+        apt_get_wrapper --yes install curl
+    fi
 
     # Check PATH var
     [[ "$PATH" == *"/sbin"* ]] || { error "Your environment PATH variable must contains /sbin directory. Maybe try running 'PATH=/sbin:\$PATH' to fix this."; return 1; }
