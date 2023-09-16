@@ -109,7 +109,10 @@ function main()
     step register_debconf              || die "Unable to insert new values into debconf database"
     step workarounds_because_sysadmin_sucks || die "Unable to run stupid workarounds"
     step install_yunohost_packages     || die "Installation of Yunohost packages failed"
-    step restart_services              || die "Error caught during services restart"
+
+    if [[ "$BUILD_IMAGE" == "0" ]] ; then
+        step restart_services          || die "Error caught during services restart"
+    fi
 
     if is_raspbian ; then
         step del_user_pi     || die "Unable to delete user pi"
