@@ -84,8 +84,8 @@ function parse_options()
 function main()
 {
     parse_options "$@"
-    check_assertions
-    confirm_installation          || { echo "    ${bold}${red}Aborting${normal}"; exit 1; }
+    check_assertions              || exit 1
+    confirm_installation          || exit 1
     upgrade_system                || die "Failed to upgrade the system"
     boring_workarounds            || die "Failed to run the boring workarounds"
     setup_package_source          || die "Setting up deb package sources failed"
@@ -159,6 +159,13 @@ function die() {
     exit 1
 }
 
+trap trapint 2
+function trapint {
+    echo ""
+    die "Aborted"
+    exit 0
+}
+
 function show_apt_progress {
 
     local percent="$1"
@@ -176,10 +183,13 @@ function show_apt_progress {
 
 function _apt() {
     set -o pipefail
-    if [[ "$AUTOMODE" == "false" ]] ;
+  	echo "===================" >>$YUNOHOST_LOG
+	echo "Running: apt-get $*" >>$YUNOHOST_LOG
+	echo "===================" >>$YUNOHOST_LOG
+    if [[ "$AUTOMODE" == "false" ]];
     then
         local title=""
-        apt-get $* -o 'APT::Status-Fd=3' 3>&1 >$YUNOHOST_LOG 2>&1 \
+        apt-get $* -o 'APT::Status-Fd=3' 3>&1 >>$YUNOHOST_LOG 2>&1 \
         | while read line; do
             local wat=$(echo $line | cut -d: -f1)
             local percent=$(echo $line | cut -d: -f3)
@@ -188,7 +198,7 @@ function _apt() {
             show_apt_progress $percent "$title" "$message";
         done \
 	&& printf "$resetline    $bold${green}Done$normal" \
-	|| { printf "$resetline    $bold${green}Failed$normal\n"; exit 1; }
+	|| { printf "$resetline    $bold${green}'apt-get $* failed$normal\n\n"; return 1; }
     else
         # Why we need pipefail : https://stackoverflow.com/a/6872163
         apt-get $* 2>&1 | tee -a $YUNOHOST_LOG || return 1
@@ -210,10 +220,16 @@ function apt_install() {
 
 function check_assertions()
 {
+    if [[ $DISTRIB != "unstable" ]]
+    then
+        error "Only unstable branch is supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production (or even testing) setup right now. Everything is in PRE-ALPHA STAGE ONLY."
+        return 1
+    fi
+
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 12 (Bookworm)."
+    [[ -f "/etc/debian_version" ]] || { error "This script can only be ran on Debian 12 (Bookworm)."; return 1; }
 
     # Assert we're on Bookworm
     # Note : we do not rely on lsb_release to avoid installing a dependency
@@ -221,39 +237,40 @@ function check_assertions()
     # TODO: remove the line with "bookworm/sid"
     [[ "$(cat /etc/debian_version)" =~ ^12.* ]] \
     || [[ "$(cat /etc/debian_version)" =~ "bookworm/sid" ]] \
-    || die "YunoHost is only available for the version 12 (Bookworm) of Debian, you are using '$(cat /etc/debian_version)'."
+    || { error "YunoHost is only available for the version 12 (Bookworm) of Debian, you are using '$(cat /etc/debian_version)'."; return 1; }
 
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
         if cat /etc/lsb-release | grep -q -i "Ubuntu\|Mint"
         then
-            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 12 (Bookworm)."
+            error "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 12 (Bookworm)."
+            return 1
         fi
     fi
 
     # Assert we're root
-    [[ "$(id -u)" == "0" ]] || die "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."
+    [[ "$(id -u)" == "0" ]] || { error "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."; return 1; }
 
     # Check PATH var
-    [[ "$PATH" == *"/sbin"* ]] || die "Your environment PATH variable must contains /sbin directory. Maybe try running 'PATH=/sbin:\$PATH' to fix this."
+    [[ "$PATH" == *"/sbin"* ]] || { error "Your environment PATH variable must contains /sbin directory. Maybe try running 'PATH=/sbin:\$PATH' to fix this."; return 1; }
 
     # Assert systemd is installed
-    command -v systemctl > /dev/null || die "YunoHost requires systemd to be installed."
+    command -v systemctl > /dev/null || { error "YunoHost requires systemd to be installed."; return 1; }
 
     # Check that kernel is >= 3.12, otherwise systemd won't work properly. Cf. https://github.com/systemd/systemd/issues/5236#issuecomment-277779394
-    dpkg --compare-versions "$(uname -r)" "ge" "3.12" || die "YunoHost requires a kernel >= 3.12. Please consult your hardware documentation or VPS provider to learn how to upgrade your kernel."
+    dpkg --compare-versions "$(uname -r)" "ge" "3.12" || { error "YunoHost requires a kernel >= 3.12. Please consult your hardware documentation or VPS provider to learn how to upgrade your kernel."; return 1; }
 
     # Check we aren't running in docker or other weird containers that we can't probably install on
     systemd-detect-virt | grep -v -q -w "docker\|container-other" || [[ "$FORCE" == "true" ]] \
-        || die "It seems like you are trying to install YunoHost in docker or a weird container technology which probably is not supported by this install script (or YunoHost as a whole). If you know what you are doing, you can run this script with -f."
+        || { error "It seems like you are trying to install YunoHost in docker or a weird container technology which probably is not supported by this install script (or YunoHost as a whole). If you know what you are doing, you can run this script with -f."; return 1; }
 
     # Check possible conflict with apache, bind9.
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "true" ]] \
-        || die "Bind9 is installed on your system. Yunohost conflicts with Bind9 because it requires dnsmasq. To be able to run this script, you should first run 'apt remove bind9 --purge --autoremove'."
+        || { error "Bind9 is installed on your system. Yunohost conflicts with Bind9 because it requires dnsmasq. To be able to run this script, you should first run 'apt remove bind9 --purge --autoremove'."; return 1; }
 
     [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2\s')" ]] || [[ "$FORCE" == "true" ]] \
-        || die "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To be able to run this script, you should first run 'apt remove apache2 --purge --autoremove'."
+        || { error "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To be able to run this script, you should first run 'apt remove apache2 --purge --autoremove'."; return 1; }
 
 }
 
@@ -275,7 +292,7 @@ EOF
 
     read -p "    Are you sure you want to proceed (y/n) ? " choice
     choice="$(echo $choice | tr '[A-Z]' '[a-z]')"
-    [[ "$choice" == "yes" ]] || [[ "$choice" == "y" ]] || return 1
+    [[ "$choice" == "yes" ]] || [[ "$choice" == "y" ]] || { error "Aborting"; return 1; }
 
     # SSH config warning
     if [[ -f /etc/ssh/sshd_config ]]
@@ -330,9 +347,9 @@ EOF
 
 function upgrade_system() {
 
-    echo ""
-    echo "$bold  1/5 • Running system upgrades$normal"
-    echo ""
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  1/5 • Running system upgrades$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
 
     apt_update || return 1
 
@@ -360,10 +377,10 @@ function upgrade_system() {
 
 function boring_workarounds() {
 
-    echo ""
-    echo ""
-    echo "$bold  2/5 • Install dependencies needed before the main install$normal"
-    echo ""
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  2/5 • Install dependencies needed before the main install$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
 
     # ###################################################################### #
     # Dependencies that must be installed prior to the rest, for reasons ... #
@@ -372,10 +389,10 @@ function boring_workarounds() {
 
     apt_install --no-install-recommends lsb-release dialog curl gnupg apt-transport-https adduser debconf debhelper dh-autoreconf locales
 
-    echo ""
-    echo ""
-    echo "$bold  3/5 • Apply various tweaks to prepare installation$normal"
-    echo ""
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  3/5 • Apply various tweaks to prepare installation$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
 
     # #################################### #
     # Attempt to fix the usual locale mess #
@@ -458,10 +475,10 @@ function boring_workarounds() {
 
 function setup_package_source() {
 
-    echo ""
-    echo ""
-    echo "$bold  4/5 • Adding YunoHost repository to apt$normal"
-    echo ""
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  4/5 • Adding YunoHost repository to apt$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
 
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
@@ -470,12 +487,8 @@ function setup_package_source() {
     local CUSTOMDEB="deb [signed-by=/usr/share/keyrings/yunohost-archive-keyring.gpg] http://forge.yunohost.org/debian/ bookworm stable"
 
     if [[ "$DISTRIB" == "stable" ]] ; then
-        echo "Only unstable branch is supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production (or even testing) setup right now. Everything is in PRE-ALPHA STAGE ONLY."
-        exit -1
         echo "$CUSTOMDEB" > $CUSTOMAPT
     elif [[ "$DISTRIB" == "testing" ]] ; then
-        echo "Only unstable branch is supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production (or even testing) setup right now. Everything is in PRE-ALPHA STAGE ONLY."
-        exit -1
         echo "$CUSTOMDEB testing" > $CUSTOMAPT
     elif [[ "$DISTRIB" == "unstable" ]] ; then
         echo "$CUSTOMDEB testing unstable" > $CUSTOMAPT
@@ -488,10 +501,10 @@ function setup_package_source() {
 
 function install_yunohost_packages() {
 
-    echo ""
-    echo ""
-    echo "$bold  5/5 • Installing YunoHost$normal"
-    echo ""
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  5/5 • Installing YunoHost$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
 
     debconf-set-selections << EOF
 slapd slapd/password1      password yunohost
@@ -528,15 +541,30 @@ EOF
 
 function conclusion() {
     # Get first local IP and global IP
-    local local_ip=$(hostname --all-ip-address | awk '{print $1}')
+    local local_ip=$(hostname --all-ip-address | tr ' ' '\n' | grep -v ":" | head -n1)
     local global_ip=$(curl https://ip.yunohost.org 2>/dev/null)
+    local no_ip=""
 
     # Will ignore local ip if it's already the global IP (e.g. for some VPS)
     [[ "$local_ip" != "$global_ip" ]] || local_ip=""
 
     # Formatting
-    [[ -z "$local_ip" ]] || local_ip=$(echo -e "\n  │    - https://$local_ip/ (local IP, if self-hosting at home)")
-    [[ -z "$global_ip" ]] || global_ip=$(echo -e "\n  │    - https://$global_ip/ (global IP, if you're on a VPS)")
+    local width=79
+    [[ -z "$local_ip" ]] || {
+        local_ip=$(echo -e "\n  │    - https://$local_ip/ (local IP, if self-hosting at home)")
+        local nb_spaces=$(( $width - ${#local_ip} ))
+        local_ip+="$(printf "%${nb_spaces}s")│"
+    }
+    [[ -z "$global_ip" ]] || {
+        global_ip=$(echo -e "\n  │    - https://$global_ip/ (global IP, if you're on a VPS)")
+        local nb_spaces=$(( $width - ${#global_ip} ))
+        global_ip+="$(printf "%${nb_spaces}s")│"
+    }
+    [[ -n "$local_ip" ]] || [[ -n "$global_ip" ]] || {
+        no_ip=$(echo -e "\n  │    - (no local nor global IP detected ?)")
+        local nb_spaces=$(( $width - ${#no_ip} ))
+        no_ip+="$(printf "%${nb_spaces}s")│"
+    }
 
     cat << EOF | tee -a $YUNOHOST_LOG
 
@@ -552,13 +580,13 @@ function conclusion() {
   │                                                                           │
   │ You can perform this step, either:                                        │
   │ • from the command line, by running 'yunohost tools postinstall' as root  │
-  │ • or from your web browser, by accessing : ${local_ip}${global_ip}        │
+  │ • or from your web browser, by accessing :                                │${local_ip}${global_ip}${no_ip}
   │                                                                           │
   │ If this is your first time with YunoHost, it is strongly recommended to   │
   │ take time to read the administator documentation and in particular the    │
   │ sections 'Finalizing your setup' and 'Getting to know YunoHost'.          │
   │                                                                           │
-  │ It is available at the following URL : 📙 https://yunohost.org/admindoc   │
+  │ It is available at the following URL : ➡️  https://yunohost.org/admindoc   │
   ╰───────────────────────────────────────────────────────────────────────────╯
 EOF
 }
