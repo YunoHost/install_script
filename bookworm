@@ -198,7 +198,7 @@ function _apt() {
             show_apt_progress $percent "$title" "$message";
         done \
 	&& printf "$resetline    $bold${green}Done$normal" \
-	|| { printf "$resetline    $bold${green}'apt-get $* failed$normal\n\n"; return 1; }
+	|| { printf "$resetline    $bold${red}'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n"; return 1; }
     else
         # Why we need pipefail : https://stackoverflow.com/a/6872163
         apt-get $* 2>&1 | tee -a $YUNOHOST_LOG || return 1
