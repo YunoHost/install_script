@@ -20,27 +20,16 @@ set -u
 # Globals
 
 readonly YUNOHOST_LOG="/var/log/yunohost-installation_$(date +%Y%m%d_%H%M%S).log"
-
-# Custom colors for whiptail
-export NEWT_COLORS='
-root=white,black
-roottext=white,black
-window=white,black
-border=white,black
-title=white,black
-textbox=white,black
-button=black,white
-compactbutton=white,black
-'
+export DEBIAN_FRONTEND=noninteractive
 
 ###############################################################################
 # Main functions                                                              #
 ###############################################################################
 
 function usage() {
-  echo "
+  cat << EOF
 Usage :
-  `basename $0` [-a] [-d <DISTRIB>] [-h]
+  $(basename $0) [-a] [-d <DISTRIB>] [-h]
 
 Options :
   -a      Enable automatic mode. No questions are asked.
@@ -50,31 +39,31 @@ Options :
   -f      Ignore checks before starting the installation. Use only if you know
           what you are doing.
   -h      Prints this help and exit
-"
+EOF
 }
 
 function parse_options()
 {
-    AUTOMODE=0
+    AUTOMODE=false
     DISTRIB=stable
-    BUILD_IMAGE=0
-    FORCE=0
+    BUILD_IMAGE=false
+    FORCE=false
 
     while getopts ":aid:fh" option; do
         case $option in
             a)
-                AUTOMODE=1
+                AUTOMODE=true
                 export DEBIAN_FRONTEND=noninteractive
                 ;;
             d)
                 DISTRIB=$OPTARG
                 ;;
             f)
-                FORCE=1
+                FORCE=true
                 ;;
             i)
                 # This hidden option will allow to build generic image for Rpi/Olimex
-                BUILD_IMAGE=1
+                BUILD_IMAGE=true
                 ;;
             h)
                 usage
@@ -95,40 +84,30 @@ function parse_options()
 function main()
 {
     parse_options "$@"
+    check_assertions              || exit 1
+    confirm_installation          || exit 1
+    upgrade_system                || die "Failed to upgrade the system"
+    boring_workarounds            || die "Failed to run the boring workarounds"
+    setup_package_source          || die "Setting up deb package sources failed"
+    install_yunohost_packages     || die "Installation of Yunohost packages failed"
 
-    check_assertions
+    # For some reason sometimes dbus is not properly started/enabled ...
+    if [[ "$BUILD_IMAGE" == "false" ]] ; then
+        systemctl is-active dbus >/dev/null || systemctl enable dbus --now
+    fi
 
-    step upgrade_system                || die "Unable to update the system"
-    step install_script_dependencies   || die "Unable to install dependencies to install script"
-    step create_custom_config          || die "Creating custom configuration file /etc/yunohost/yunohost.conf failed"
-    step confirm_installation          || die "Installation cancelled at your request"
-    step manage_sshd_config            || die "Error caught during sshd management"
-    step fix_locales                   # do not die for a failure here, it's minor
-    step setup_package_source          || die "Setting up deb package sources failed"
-    step apt_update                    || die "Error caught during 'apt-get update'"
-    step register_debconf              || die "Unable to insert new values into debconf database"
-    step workarounds_because_sysadmin_sucks || die "Unable to run stupid workarounds"
-    step install_yunohost_packages     || die "Installation of Yunohost packages failed"
-
-    if [[ "$BUILD_IMAGE" == "0" ]] ; then
-        step restart_services          || die "Error caught during services restart"
+    if [[ "$BUILD_IMAGE" == "true" ]] ; then
+        clean_image || die "Unable to clean image"
     fi
 
     if is_raspbian ; then
-        step del_user_pi     || die "Unable to delete user pi"
-    fi
 
-    if [[ "$BUILD_IMAGE" == "1" ]] ; then
-        step clean_image || die "Unable to clean image"
-    fi
+        # FIXME : add a proper conclusion + timer warning?
 
-    if is_raspbian ; then
         # Reboot should be done before postinstall to be able to run iptables rules
         reboot
     fi
 
-    info "Installation logs are available in $YUNOHOST_LOG"
-    success "YunoHost installation completed !"
     conclusion
     exit 0
 }
@@ -148,6 +127,7 @@ readonly orange=$(printf '\033[33m')
 readonly blue=$(printf '\033[34m')
 readonly yellow=$(printf '\033[93m')
 readonly white=$(printf '\033[39m')
+readonly resetline=$(printf '\r\033[K')
 
 function success()
 {
@@ -179,31 +159,59 @@ function die() {
     exit 1
 }
 
-function step() {
-  info "Running $1"
-  $*
-  local return_code="$?"
-  return $return_code
+trap trapint 2
+function trapint {
+    echo ""
+    die "Aborted"
+    exit 0
 }
 
-function apt_get_wrapper() {
-    if [[ "$AUTOMODE" == "0" ]] ;
+function show_apt_progress {
+
+    local percent="$1"
+    local title="$2"
+    local message="$3"
+
+    local done=$((${percent%.*}*40/100))
+    local todo=$((39 - $done))
+
+    local done_sub_bar="$(printf "%${done}s")"
+    local todo_sub_bar="$(printf "%${todo}s")"
+
+    echo -ne "$resetline  $bold$blue$title$normal [${done_sub_bar// /=}>${todo_sub_bar}] ${percent:0:4}% ${message:0:40}"
+}
+
+function _apt() {
+    set -o pipefail
+  	echo "===================" >>$YUNOHOST_LOG
+	echo "Running: apt-get $*" >>$YUNOHOST_LOG
+	echo "===================" >>$YUNOHOST_LOG
+    if [[ "$AUTOMODE" == "false" ]];
     then
-      debconf-apt-progress                             \
-          --logfile $YUNOHOST_LOG                      \
-          --                                           \
-          apt-get $*
+        local title=""
+        apt-get $* -o 'APT::Status-Fd=3' 3>&1 >>$YUNOHOST_LOG 2>&1 \
+        | while read line; do
+            local wat=$(echo $line | cut -d: -f1)
+            local percent=$(echo $line | cut -d: -f3)
+            local message=$(echo $line | cut -d: -f2)
+	    [[ $wat == "dlstatus" ]] && local title="Downloading" || local title="Installing"
+            show_apt_progress $percent "$title" "$message";
+        done \
+	&& printf "$resetline    $bold${green}Done$normal" \
+	|| { printf "$resetline    $bold${red}'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n"; return 1; }
     else
         # Why we need pipefail : https://stackoverflow.com/a/6872163
-        set -o pipefail
         apt-get $* 2>&1 | tee -a $YUNOHOST_LOG || return 1
-        set +o pipefail
     fi
+    set +o pipefail
 }
 
-
 function apt_update() {
-    apt_get_wrapper update --allow-releaseinfo-change
+    _apt update --allow-releaseinfo-change
+}
+
+function apt_install() {
+    _apt install --assume-yes -o Dpkg::Options::="--force-confold" $*
 }
 
 ###############################################################################
@@ -212,10 +220,16 @@ function apt_update() {
 
 function check_assertions()
 {
+    if [[ $DISTRIB != "unstable" ]]
+    then
+        error "Only unstable branch is supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production (or even testing) setup right now. Everything is in PRE-ALPHA STAGE ONLY."
+        return 1
+    fi
+
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ -f "/etc/debian_version" ]] || die "This script can only be ran on Debian 12 (Bookworm)."
+    [[ -f "/etc/debian_version" ]] || { error "This script can only be ran on Debian 12 (Bookworm)."; return 1; }
 
     # Assert we're on Bookworm
     # Note : we do not rely on lsb_release to avoid installing a dependency
@@ -223,239 +237,190 @@ function check_assertions()
     # TODO: remove the line with "bookworm/sid"
     [[ "$(cat /etc/debian_version)" =~ ^12.* ]] \
     || [[ "$(cat /etc/debian_version)" =~ "bookworm/sid" ]] \
-    || die "YunoHost is only available for the version 12 (Bookworm) of Debian, you are using '$(cat /etc/debian_version)'."
+    || { error "YunoHost is only available for the version 12 (Bookworm) of Debian, you are using '$(cat /etc/debian_version)'."; return 1; }
 
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
         if cat /etc/lsb-release | grep -q -i "Ubuntu\|Mint"
         then
-            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 12 (Bookworm)."
+            error "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 12 (Bookworm)."
+            return 1
         fi
     fi
 
     # Assert we're root
-    [[ "$(id -u)" == "0" ]] || die "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."
+    [[ "$(id -u)" == "0" ]] || { error "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."; return 1; }
 
     # Check PATH var
-    [[ "$PATH" == *"/sbin"* ]] || die "Your environment PATH variable must contains /sbin directory. Maybe try running 'PATH=/sbin:\$PATH' to fix this."
+    [[ "$PATH" == *"/sbin"* ]] || { error "Your environment PATH variable must contains /sbin directory. Maybe try running 'PATH=/sbin:\$PATH' to fix this."; return 1; }
 
     # Assert systemd is installed
-    command -v systemctl > /dev/null || die "YunoHost requires systemd to be installed."
+    command -v systemctl > /dev/null || { error "YunoHost requires systemd to be installed."; return 1; }
 
     # Check that kernel is >= 3.12, otherwise systemd won't work properly. Cf. https://github.com/systemd/systemd/issues/5236#issuecomment-277779394
-    dpkg --compare-versions "$(uname -r)" "ge" "3.12" || die "YunoHost requires a kernel >= 3.12. Please consult your hardware documentation or VPS provider to learn how to upgrade your kernel."
-
-    # If we're on Raspbian, we want the user 'pi' to be logged out because
-    # it's going to be deleted for security reasons...
-    if is_raspbian ; then
-        user_pi_logged_out || die "The user pi should be logged out."
-    fi
+    dpkg --compare-versions "$(uname -r)" "ge" "3.12" || { error "YunoHost requires a kernel >= 3.12. Please consult your hardware documentation or VPS provider to learn how to upgrade your kernel."; return 1; }
 
     # Check we aren't running in docker or other weird containers that we can't probably install on
-    systemd-detect-virt | grep -v -q -w "docker\|container-other" || [[ "$FORCE" == "1" ]] \
-        || die "It seems like you are trying to install YunoHost in docker or a weird container technology which probably is not supported by this install script (or YunoHost as a whole). If you know what you are doing, you can run this script with -f."
+    systemd-detect-virt | grep -v -q -w "docker\|container-other" || [[ "$FORCE" == "true" ]] \
+        || { error "It seems like you are trying to install YunoHost in docker or a weird container technology which probably is not supported by this install script (or YunoHost as a whole). If you know what you are doing, you can run this script with -f."; return 1; }
 
     # Check possible conflict with apache, bind9.
-    [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "1" ]] \
-        || die "Bind9 is installed on your system. Yunohost conflicts with Bind9 because it requires dnsmasq. To be able to run this script, you should first run 'apt remove bind9 --purge --autoremove'."
+    [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "true" ]] \
+        || { error "Bind9 is installed on your system. Yunohost conflicts with Bind9 because it requires dnsmasq. To be able to run this script, you should first run 'apt remove bind9 --purge --autoremove'."; return 1; }
 
-    [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2\s')" ]] || [[ "$FORCE" == "1" ]] \
-        || die "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To be able to run this script, you should first run 'apt remove apache2 --purge --autoremove'."
+    [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2\s')" ]] || [[ "$FORCE" == "true" ]] \
+        || { error "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To be able to run this script, you should first run 'apt remove apache2 --purge --autoremove'."; return 1; }
 
+}
+
+function confirm_installation() {
+
+    [[ "$AUTOMODE" == "true" ]] && return 0
+
+    cat << EOF | tee -a $YUNOHOST_LOG
+
+  ╭───────────────────────╮
+  │ YunoHost Installation │
+  ╰───────────────────────╯
+
+  • Installing YunoHost requires to install various important services,
+    and possibly rework the configuration of some services that may already
+    be installed (such as: mariadb, postfix, dovecot, fail2ban, nginx, slapd)
+
+EOF
+
+    read -p "    Are you sure you want to proceed (y/n) ? " choice
+    choice="$(echo $choice | tr '[A-Z]' '[a-z]')"
+    [[ "$choice" == "yes" ]] || [[ "$choice" == "y" ]] || { error "Aborting"; return 1; }
+
+    # SSH config warning
+    if [[ -f /etc/ssh/sshd_config ]]
+    then
+
+        # If root login is currently enabled
+        local root_login_warning=""
+        if ! grep -E "^[[:blank:]]*PermitRootLogin[[:blank:]]+no" /etc/ssh/sshd_config ; then
+            root_login_warning="      • SSH login using root will be disabled (except from local network).\n"
+            root_login_warning+="        Instead, you should login using the first YunoHost user."
+
+        fi
+
+        # If current conf uses a custom ssh port
+        local ssh_port_warning=""
+        if grep -Ev "^[[:blank:]]*Port[[:blank:]]+22[[:blank:]]*(#.*)?$" /etc/ssh/sshd_config | grep -E "^[[:blank:]]*Port[[:blank:]]+[[:digit:]]+$" ; then
+            ssh_port_warning="      • You will have to connect using port 22 instead of your custom SSH port,\n"
+            ssh_port_warning+="        though you can reconfigure this from YunoHost after the postinstall."
+        fi
+
+        if [[ -n "$root_login_warning" ]] || [[ -n "$ssh_port_warning" ]]
+        then
+            cat << EOF | tee -a $YUNOHOST_LOG
+
+  • Additionally, it is encouraged to let YunoHost manage the SSH configuration.
+    However, you should be aware that:
+$(test -n "$root_login_warning" && echo -e "$root_login_warning")
+$(test -n "$ssh_port_warning" && echo -e "$ssh_port_warning")
+    (Note that this will only be effective *after* you run YunoHost's postinstall)
+
+EOF
+            read -p "    Should YunoHost override the SSH configuration (y/n) ? " choice
+            choice="$(echo $choice | tr '[A-Z]' '[a-z]')"
+            if [[ "$choice" != "yes" ]] && [[ "$choice" != "y" ]]
+            then
+                # Keep a copy to be restored during the postinstall
+                # so that the ssh confs behaves as manually modified.
+                cp /etc/ssh/sshd_config /etc/ssh/sshd_config.before_yunohost
+            fi
+        fi
+    fi
+
+    cat << EOF | tee -a $YUNOHOST_LOG
+
+  🚀 ${bold}Let's go !$normal
+
+  📜 Detailed logs will be available in $YUNOHOST_LOG
+EOF
+
+    return 0
 }
 
 function upgrade_system() {
 
-    # Some VPS don't have debconf install, therefore don't have debconf-apt-progress...
-    # c.f. https://github.com/YunoHost/issues/issues/1828
-    dpkg --list | grep -q '^ii  debconf ' || { apt update --allow-releaseinfo-change; apt install debconf; }
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  1/5 • Running system upgrades$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
 
-    apt_get_wrapper update --allow-releaseinfo-change \
-    || return 1
+    apt_update || return 1
 
     # We need libtext-iconv-perl even before the dist-upgrade,
     # otherwise the dist-upgrade might fails on some setups because
     # perl is yolomacnuggets :|
     # Stuff like "Can't locate object method "new" via package "Text::Iconv""
-    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y install                           \
-                    libtext-iconv-perl                   \
-    || return 1
+    apt_install libtext-iconv-perl || return 1
 
     # Manually upgrade grub stuff in non-interactive mode,
     # otherwise a weird technical question is asked to the user
     # regarding how to upgrade grub's configuration...
-    DEBIAN_FRONTEND=noninteractive \
-    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y install --only-upgrade \
-                    grub-common grub2-common \
-    || true
+    apt_install --only-upgrade grub-common grub2-common || true
 
-    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y dist-upgrade \
-    || return 2
+    _apt dist-upgrade -y -o Dpkg::Options::="--force-confold" || return 1
 
     if is_raspbian ; then
-        apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                        -y install rpi-update \
-        || return 3
+        apt_install rpi-update || return 1
 
-    	if [[ "$BUILD_IMAGE" != "1" ]] ; then
-		(rpi-update 2>&1 | tee -a $YUNOHOST_LOG) \
-		|| return 4
-	fi
+            if [[ "$BUILD_IMAGE" == "false" ]] ; then
+                (rpi-update 2>&1 | tee -a $YUNOHOST_LOG) || return 1
+        fi
     fi
 }
 
-function install_script_dependencies() {
-    # dependencies of the install script itself
-    local DEPENDENCIES="lsb-release whiptail gnupg apt-transport-https adduser"
+function boring_workarounds() {
 
-    if [[ "$AUTOMODE" == "0" ]] ;
-    then
-        DEPENDENCIES+=" dialog"
-    fi
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  2/5 • Install dependencies needed before the main install$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
 
-    apt_update
-    apt_get_wrapper -o Dpkg::Options::="--force-confold" \
-                    -y install                           \
-                    $DEPENDENCIES                        \
-      || return 1
-}
+    # ###################################################################### #
+    # Dependencies that must be installed prior to the rest, for reasons ... #
+    # (for example https://github.com/YunoHost/issues/issues/1382)           #
+    # ###################################################################### #
 
-function create_custom_config() {
-    # Create YunoHost configuration folder
-    mkdir -p /etc/yunohost/
-}
+    apt_install --no-install-recommends lsb-release dialog curl gnupg apt-transport-https adduser debconf debhelper dh-autoreconf locales
 
-function confirm_installation() {
-  [[ "$AUTOMODE" == "1" ]] && return 0
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  3/5 • Apply various tweaks to prepare installation$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
 
-  local text="
-Caution !
+    # #################################### #
+    # Attempt to fix the usual locale mess #
+    # #################################### #
 
-Your configuration files for :
-  - postfix
-  - dovecot
-  - mysql
-  - nginx
-  - metronome
-will be overwritten !
+    # This function tries to fix the whole locale and perl mess about missing locale files
 
-Are you sure you want  to proceed with the installation of Yunohost?
-"
-  whiptail --title "Yunohost Installation" --yesno "$text" 20 78
-}
+    # Generate at least en_US.UTF-8
+    grep -q "^ *en_US.UTF-8" /etc/locale.gen || echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
 
-function manage_sshd_config() {
-    # In auto mode we erase the current sshd config
-    [[ "$AUTOMODE" == "1" ]] && return 0
+    # FIXME: here some day we should try to identify the user's lang from LANG or LC_ALL and generate the appropriate locale ...
+    # (and set this lang as the default in /etc/env 3 lines below)
 
-    [[ ! -f /etc/ssh/sshd_config ]] && return 0
+    locale-gen >/dev/null
 
-    local sshd_config_possible_issues="0"
-    local text="To improve the security of your server, it is recommended to let YunoHost manage the SSH configuration.
-Your current SSH configuration differs from the recommended configuration.
-If you let YunoHost reconfigure it, the way you connect to your server through SSH will change in the following way:"
-
-    # If root login is currently enabled
-    if ! grep -E "^[[:blank:]]*PermitRootLogin[[:blank:]]+no" /etc/ssh/sshd_config ; then
-        sshd_config_possible_issues="1"
-        text="$text\n- you will not be able to connect as root through SSH. Instead you should use the admin user ;
-"
-    fi
-
-    # If current conf uses a custom ssh port
-    if grep -Ev "^[[:blank:]]*Port[[:blank:]]+22[[:blank:]]*(#.*)?$" /etc/ssh/sshd_config | grep -E "^[[:blank:]]*Port[[:blank:]]+[[:digit:]]+$" ; then
-        sshd_config_possible_issues="1"
-        text="$text\n- you will have to connect using port 22 instead of your current custom SSH port. Feel free to reconfigure it after the postinstallation.
-"
-    fi
-
-    # If we are using DSA key for ssh server fingerprint
-    if grep -E "^[[:blank:]]*HostKey[[:blank:]]+/etc/ssh/ssh_host_dsa_key" /etc/ssh/sshd_config ; then
-        sshd_config_possible_issues="1"
-        text="$text\n- the DSA key will be disabled. Hence, you might later need to invalidate a spooky warning from your SSH client, and recheck the fingerprint of your server ;
-"
-
-    fi
-
-    text="${text}
-Do you agree to let YunoHost apply those changes to your configuration and therefore affect the way you connect through SSH ?
-"
-
-    # If no possible issue found, we just assume it's okay and will take over the SSH conf during postinstall
-    [[ "$sshd_config_possible_issues" == "0" ]] && return 0
-
-    # Otherwise, we ask the user to confirm
-    if ! whiptail --title "SSH Configuration" --yesno "$text" 20 78 --defaultno ; then
-
-        # Keep a copy to be restored during the postinstall
-        # so that the ssh confs behaves as manually modified.
-        cp /etc/ssh/sshd_config /etc/ssh/sshd_config.before_yunohost
-    fi
-
-    return 0
-}
-
-function setup_package_source() {
-
-    local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
-
-    # Debian repository
-
-    local CUSTOMDEB="deb [signed-by=/usr/share/keyrings/yunohost-archive-keyring.gpg] http://forge.yunohost.org/debian/ bookworm stable"
-
-    if [[ "$DISTRIB" == "stable" ]] ; then
-        echo "Only unstable branch is supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production (or even testing) setup right now. Everything is in PRE-ALPHA STAGE ONLY."
-        exit -1
-        echo "$CUSTOMDEB" > $CUSTOMAPT
-    elif [[ "$DISTRIB" == "testing" ]] ; then
-        echo "Only unstable branch is supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production (or even testing) setup right now. Everything is in PRE-ALPHA STAGE ONLY."
-        exit -1
-        echo "$CUSTOMDEB testing" > $CUSTOMAPT
-    elif [[ "$DISTRIB" == "unstable" ]] ; then
-        echo "$CUSTOMDEB testing unstable" > $CUSTOMAPT
-    fi
-
-    # Add YunoHost repository key to the keyring
-    curl --fail --silent https://forge.yunohost.org/yunohost_bookworm.asc | gpg --dearmor > /usr/share/keyrings/yunohost-archive-keyring.gpg
-    apt-get -qq update
-}
-
-function register_debconf() {
-    debconf-set-selections << EOF
-slapd slapd/password1 password yunohost
-slapd slapd/password2 password yunohost
-slapd slapd/domain    string yunohost.org
-slapd shared/organization     string yunohost.org
-slapd	slapd/allow_ldap_v2	boolean	false
-slapd	slapd/invalid_config	boolean	true
-slapd	slapd/backend	select	MDB
-postfix postfix/main_mailer_type        select Internet Site
-postfix postfix/mailname string /etc/mailname
-nslcd	nslcd/ldap-bindpw	password
-nslcd	nslcd/ldap-starttls	boolean	false
-nslcd	nslcd/ldap-reqcert	select
-nslcd	nslcd/ldap-uris	string	ldap://localhost/
-nslcd	nslcd/ldap-binddn	string
-nslcd	nslcd/ldap-base	string	dc=yunohost,dc=org
-libnss-ldapd    libnss-ldapd/nsswitch multiselect group, passwd, shadow
-postsrsd postsrsd/domain string yunohost.org
-EOF
-}
-
-function workarounds_because_sysadmin_sucks() {
+    # If no /etc/environment exists, default to en_US.UTF-8
+    grep -q LC_ALL /etc/environment || echo 'LC_ALL="en_US.UTF-8"' >> /etc/environment
+    source /etc/environment
+    export LC_ALL
 
     # ######################## #
     # Workarounds for fail2ban #
     # ######################## #
-    
-    # We need to create auth.log in case it does not exists, because in some situation, 
+
+    # We need to create auth.log in case it does not exists, because in some situation,
     # this file does not exists, fail2ban will miserably fail to start because
     # the default fail2ban jail include the sshd jail ... >.>
-    touch /var/log/auth.log 
+    touch /var/log/auth.log
 
     # ######################## #
     # Workarounds for avahi    #
@@ -477,117 +442,152 @@ function workarounds_because_sysadmin_sucks() {
     # consecutive uids).
 
     # Return without error if avahi already exists
-    if id avahi > /dev/null 2>&1 ; then
-        info "User avahi already exists (with uid $(id avahi)), skipping avahi workaround"
-        return 0
+    if ! id avahi > /dev/null 2>&1;
+    then
+        # Get a random unused uid between 500 and 999 (system-user)
+        local avahi_id=$((500 + RANDOM % 500))
+        while cut -d ':' -f 3 /etc/passwd | grep -q $avahi_id ;
+        do
+            avahi_id=$((500 + RANDOM % 500))
+        done
+
+        #info "Workaround for avahi : creating avahi user with uid $avahi_id"
+
+        # Use the same adduser parameter as in the avahi-daemon postinst script
+        # Just specify --uid explicitely
+        adduser --disabled-password  --quiet --system     \
+            --home /var/run/avahi-daemon --no-create-home \
+            --gecos "Avahi mDNS daemon" --group avahi     \
+            --uid $avahi_id
     fi
 
-    # Get a random unused uid between 500 and 999 (system-user)
-    local avahi_id=$((500 + RANDOM % 500))
-    while cut -d ':' -f 3 /etc/passwd | grep -q $avahi_id ;
-    do
-        avahi_id=$((500 + RANDOM % 500))
-    done
-
-    info "Workaround for avahi : creating avahi user with uid $avahi_id"
-
-    # Use the same adduser parameter as in the avahi-daemon postinst script
-    # Just specify --uid explicitely
-    adduser --disabled-password  --quiet --system     \
-        --home /var/run/avahi-daemon --no-create-home \
-        --gecos "Avahi mDNS daemon" --group avahi     \
-        --uid $avahi_id
-
-}
-
-function install_yunohost_packages() {
-    # Allow sudo removal even if no root password has been set (on some DO
-    # droplet or Vagrant virtual machines), as YunoHost use sudo-ldap
-    export SUDO_FORCE_REMOVE=yes
+    # ########## #
+    # Resolvconf #
+    # ########## #
 
     # On some machines (e.g. OVH VPS), the /etc/resolv.conf is immutable
     # We need to make it mutable for the resolvconf dependency to be installed
     chattr -i /etc/resolv.conf 2>/dev/null || true
 
-    # Install those damn deps independently ...
-    # otherwise they make the install crash for random reasons ~.~
-    # c.f. https://github.com/YunoHost/issues/issues/1382
-    apt_get_wrapper \
-	    -o Dpkg::Options::="--force-confold" \
-            -y install                           \
-	    debhelper dh-autoreconf              \
-      || true
+    # Done
+    printf "$resetline    $bold${green}Done$normal"
+}
+
+function setup_package_source() {
+
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  4/5 • Adding YunoHost repository to apt$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+
+    local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
+
+    # Debian repository
+
+    local CUSTOMDEB="deb [signed-by=/usr/share/keyrings/yunohost-booworm.gpg] http://forge.yunohost.org/debian/ bookworm stable"
+
+    if [[ "$DISTRIB" == "stable" ]] ; then
+        echo "$CUSTOMDEB" > $CUSTOMAPT
+    elif [[ "$DISTRIB" == "testing" ]] ; then
+        echo "$CUSTOMDEB testing" > $CUSTOMAPT
+    elif [[ "$DISTRIB" == "unstable" ]] ; then
+        echo "$CUSTOMDEB testing unstable" > $CUSTOMAPT
+    fi
+
+    # Add YunoHost repository key to the keyring
+    curl --fail --silent https://forge.yunohost.org/yunohost_bookworm.asc | gpg --dearmor > /usr/share/keyrings/yunohost-bookworm.gpg
+    apt_update
+}
+
+function install_yunohost_packages() {
+
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+    echo "$bold  5/5 • Installing YunoHost$normal" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a $YUNOHOST_LOG
+
+    debconf-set-selections << EOF
+slapd slapd/password1      password yunohost
+slapd slapd/password2      password yunohost
+slapd slapd/domain         string   yunohost.org
+slapd shared/organization  string   yunohost.org
+slapd slapd/allow_ldap_v2  boolean  false
+slapd slapd/invalid_config boolean  true
+slapd slapd/backend        select   MDB
+postfix postfix/main_mailer_type select Internet Site
+postfix postfix/mailname         string /etc/mailname
+nslcd nslcd/ldap-bindpw    password
+nslcd nslcd/ldap-starttls  boolean   false
+nslcd nslcd/ldap-reqcert   select
+nslcd nslcd/ldap-uris      string    ldap://localhost/
+nslcd nslcd/ldap-binddn    string
+nslcd nslcd/ldap-base      string    dc=yunohost,dc=org
+libnss-ldapd libnss-ldapd/nsswitch multiselect group, passwd, shadow
+postsrsd postsrsd/domain string yunohost.org
+EOF
+
+    # Allow sudo removal even if no root password has been set (on some DO
+    # droplet or Vagrant virtual machines), as YunoHost use sudo-ldap
+    export SUDO_FORCE_REMOVE=yes
 
     # Install YunoHost
-    apt_get_wrapper \
-        -o Dpkg::Options::="--force-confold" \
+    # FIXME : do we still want to install recommends ?
+    apt_install                              \
         -o APT::install-recommends=true      \
-        -y install                           \
         yunohost yunohost-admin postfix      \
     || return 1
-    # FIXME : re-add yunohost-admin once it's built for bookworm
-}
 
-function restart_services() {
-    service slapd restart
-#    service yunohost-firewall start
-    service unscd restart
-    service nslcd restart
-
-    # For some reason sometimes dbus is not properly started/enabled ...
-    systemctl is-active dbus >/dev/null || systemctl enable dbus --now
-
-    return 0
-}
-
-function fix_locales() {
-    # This function tries to fix the whole locale and perl mess about missing locale files
-    
-    # Install 'locales' if locale-gen does not exists yet
-    command -v locale-gen > /dev/null || apt_get_wrapper -o Dpkg::Options::="--force-confold" -y install locales
-    
-    # Generate at least en_US.UTF-8
-    grep -q "^ *en_US.UTF-8" /etc/locale.gen || echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
-    
-    # FIXME: here some day we should try to identify the user's lang from LANG or LC_ALL and generate the appropriate locale ...
-    # (and set this lang as the default in /etc/env 3 lines below)
-    
-    locale-gen
-    
-    # If no /etc/environment exists, default to en_US.UTF-8
-    [ "$(grep LC_ALL /etc/environment)" ] || echo 'LC_ALL="en_US.UTF-8"' >> /etc/environment
-    source /etc/environment
-    export LC_ALL
 }
 
 function conclusion() {
     # Get first local IP and global IP
-    local local_ip=$(hostname --all-ip-address | awk '{print $1}')
+    local local_ip=$(hostname --all-ip-address | tr ' ' '\n' | grep -v ":" | head -n1)
     local global_ip=$(curl https://ip.yunohost.org 2>/dev/null)
+    local no_ip=""
 
     # Will ignore local ip if it's already the global IP (e.g. for some VPS)
     [[ "$local_ip" != "$global_ip" ]] || local_ip=""
 
     # Formatting
-    [[ -z "$local_ip" ]] || local_ip=$(echo -e "\n    - https://$local_ip/ (local IP, if self-hosting at home)")
-    [[ -z "$global_ip" ]] || global_ip=$(echo -e "\n    - https://$global_ip/ (global IP, if you're on a VPS)")
+    local width=79
+    [[ -z "$local_ip" ]] || {
+        local_ip=$(echo -e "\n  │    - https://$local_ip/ (local IP, if self-hosting at home)")
+        local nb_spaces=$(( $width - ${#local_ip} ))
+        local_ip+="$(printf "%${nb_spaces}s")│"
+    }
+    [[ -z "$global_ip" ]] || {
+        global_ip=$(echo -e "\n  │    - https://$global_ip/ (global IP, if you're on a VPS)")
+        local nb_spaces=$(( $width - ${#global_ip} ))
+        global_ip+="$(printf "%${nb_spaces}s")│"
+    }
+    [[ -n "$local_ip" ]] || [[ -n "$global_ip" ]] || {
+        no_ip=$(echo -e "\n  │    - (no local nor global IP detected ?)")
+        local nb_spaces=$(( $width - ${#no_ip} ))
+        no_ip+="$(printf "%${nb_spaces}s")│"
+    }
 
-    cat << EOF
-===============================================================================
-You should now proceed with Yunohost post-installation. This is where you will
-be asked for :
-  - the main domain of your server ;
-  - the administration password.
+    cat << EOF | tee -a $YUNOHOST_LOG
 
-You can perform this step :
-  - from the command line, by running 'yunohost tools postinstall' as root
-  - or from your web browser, by accessing : ${local_ip}${global_ip}
 
-If this is your first time with YunoHost, it is strongly recommended to take
-time to read the administator documentation and in particular the sections
-'Finalizing your setup' and 'Getting to know YunoHost'. It is available at
-the following URL : https://yunohost.org/admindoc
-===============================================================================
+  🎉 ${bold}YunoHost installation completed!$normal
+
+  ╭───────────────────────────────────────────────────────────────────────────╮
+  │ You should now proceed with Yunohost post-installation.                   │
+  │ This is where you will be asked for:                                      │
+  │ • the main domain of your server ;                                        │
+  │ • the administration password ;                                           │
+  │ • the name and password of the first user, which will also be admin.      │
+  │                                                                           │
+  │ You can perform this step, either:                                        │
+  │ • from the command line, by running 'yunohost tools postinstall' as root  │
+  │ • or from your web browser, by accessing :                                │${local_ip}${global_ip}${no_ip}
+  │                                                                           │
+  │ If this is your first time with YunoHost, it is strongly recommended to   │
+  │ take time to read the administator documentation and in particular the    │
+  │ sections 'Finalizing your setup' and 'Getting to know YunoHost'.          │
+  │                                                                           │
+  │ It is available at the following URL : ➡️  https://yunohost.org/admindoc   │
+  ╰───────────────────────────────────────────────────────────────────────────╯
 EOF
 }
 
@@ -602,17 +602,6 @@ function is_raspbian() {
         return 1
     fi
     return 0
-}
-
-function user_pi_logged_out() {
-    who | grep -w pi > /dev/null && return 1
-    return 0
-}
-
-function del_user_pi() {
-    if id "pi" >/dev/null 2>&1; then
-        deluser --remove-all-files pi >> $YUNOHOST_LOG 2>&1
-    fi
 }
 
 ###############################################################################
