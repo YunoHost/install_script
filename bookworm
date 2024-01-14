@@ -484,7 +484,7 @@ function setup_package_source() {
 
     # Debian repository
 
-    local CUSTOMDEB="deb [signed-by=/usr/share/keyrings/yunohost-booworm.gpg] http://forge.yunohost.org/debian/ bookworm stable"
+    local CUSTOMDEB="deb [signed-by=/usr/share/keyrings/yunohost-bookworm.gpg] http://forge.yunohost.org/debian/ bookworm stable"
 
     if [[ "$DISTRIB" == "stable" ]] ; then
         echo "$CUSTOMDEB" > $CUSTOMAPT
