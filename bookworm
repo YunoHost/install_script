@@ -290,7 +290,7 @@ function confirm_installation() {
 
 EOF
 
-    read -p "    Are you sure you want to proceed (y/n) ? " choice
+    read -p "    Are you sure you want to proceed (y/n) ? " choice < /dev/tty
     choice="$(echo $choice | tr '[A-Z]' '[a-z]')"
     [[ "$choice" == "yes" ]] || [[ "$choice" == "y" ]] || { error "Aborting"; return 1; }
 
@@ -324,7 +324,7 @@ $(test -n "$ssh_port_warning" && echo -e "$ssh_port_warning")
     (Note that this will only be effective *after* you run YunoHost's postinstall)
 
 EOF
-            read -p "    Should YunoHost override the SSH configuration (y/n) ? " choice
+            read -p "    Should YunoHost override the SSH configuration (y/n) ? " choice < /dev/tty
             choice="$(echo $choice | tr '[A-Z]' '[a-z]')"
             if [[ "$choice" != "yes" ]] && [[ "$choice" != "y" ]]
             then
