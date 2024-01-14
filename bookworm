@@ -588,6 +588,8 @@ function conclusion() {
   │                                                                           │
   │ It is available at the following URL : ➡️  https://yunohost.org/admindoc   │
   ╰───────────────────────────────────────────────────────────────────────────╯
+
+
 EOF
 }
 
