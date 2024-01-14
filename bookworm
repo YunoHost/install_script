@@ -279,14 +279,14 @@ function confirm_installation() {
     [[ "$AUTOMODE" == "true" ]] && return 0
 
     cat << EOF | tee -a $YUNOHOST_LOG
-
+$bold
   ╭───────────────────────╮
   │ YunoHost Installation │
   ╰───────────────────────╯
-
+$normal
   • Installing YunoHost requires to install various important services,
     and possibly rework the configuration of some services that may already
-    be installed (such as: mariadb, postfix, dovecot, fail2ban, nginx, slapd)
+    be installed (such as: nginx, postfix, dovecot, fail2ban, slapd)
 
 EOF
 
