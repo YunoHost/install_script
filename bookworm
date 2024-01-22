@@ -294,6 +294,23 @@ EOF
     choice="$(echo $choice | tr '[A-Z]' '[a-z]')"
     [[ "$choice" == "yes" ]] || [[ "$choice" == "y" ]] || { error "Aborting"; return 1; }
 
+    if [[ "$DISTRIB" == "unstable" ]]
+    then
+    	cat << EOF | tee -a $YUNOHOST_LOG
+
+  • You are installing the unstable/alpha version of YunoHost 12/Bookworm.
+
+        You should be warned that THIS IS ALPHA-STAGE DEVELOPMENT.
+            WE ABSOLUTELY DISCOURAGE ANY USE OF THIS VERSION
+         IN A PRODUCTION CONTEXT, THIS IS ONLY MEANT FOR *TESTING*.
+
+                        THINGS **WILL** BREAK.
+
+EOF
+        read -p "    Type 'Yes, I understand' if you understand: " choice < /dev/tty
+    	[[ "$choice" == "Yes, I understand" ]] || { error "Aborting"; return 1; }
+    fi
+
     # SSH config warning
     if [[ -f /etc/ssh/sshd_config ]]
     then
