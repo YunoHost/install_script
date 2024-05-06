@@ -273,7 +273,7 @@ function check_assertions()
 
     # Assert curl is setup
     if ! command -v curl 2>&1 >/dev/null; then
-        apt_get_wrapper --yes install curl
+        apt_install curl || { error "Yunohost installer requires curl to be installed, but it failed to install it."; return 1; }
     fi
 
     # Check PATH var
