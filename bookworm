@@ -236,7 +236,7 @@ function check_assertions()
 {
     if [[ $DISTRIB == "stable" ]]
     then
-        error "Only unstable and testing branches are supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production setup right now. Everything is in BETA STAGE ONLY."
+        error "Only unstable and testing branches are supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production setup right now UNLESS YOU ARE A POWER-USER. Everything is in BETA STAGE ONLY."
         return 1
     fi
 
