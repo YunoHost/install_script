@@ -204,6 +204,22 @@ function show_apt_progress {
     echo -ne "$resetline  $bold$blue$title$normal [${done_sub_bar// /=}>${todo_sub_bar}] ${percent:0:4}% ${message:0:40}"
 }
 
+function _apt_with_progress() {
+    local wat percent message title
+    apt-get "$@" -o 'APT::Status-Fd=3' 3>&1 >> "$YUNOHOST_LOG" 2>&1 \
+        | while read -r line; do
+            wat=$(echo "$line" | cut -d: -f1)
+            percent=$(echo "$line" | cut -d: -f3)
+            message=$(echo "$line" | cut -d: -f2)
+            if [[ $wat == "dlstatus" ]]; then
+                title="Downloading"
+            else
+                title="Installing"
+            fi
+            show_apt_progress "$percent" "$title" "$message";
+        done
+}
+
 function _apt() {
     set -o pipefail
     cat << EOF >> "$YUNOHOST_LOG"
@@ -211,24 +227,21 @@ function _apt() {
 Running: apt-get $*
 ===================
 EOF
-    if [[ "$AUTOMODE" == "false" ]]; then
-        local title=""
-        apt-get "$@" -o 'APT::Status-Fd=3' 3>&1 >> "$YUNOHOST_LOG" 2>&1 \
-            | while read -r line; do
-                local wat percent message
-                wat=$(echo "$line" | cut -d: -f1)
-                percent=$(echo "$line" | cut -d: -f3)
-                message=$(echo "$line" | cut -d: -f2)
-                [[ $wat == "dlstatus" ]] && local title="Downloading" || local title="Installing"
-                show_apt_progress "$percent" "$title" "$message";
-            done \
-            && printf "$resetline    $bold${green}Done$normal" \
-            || { printf "$resetline    $bold${red}'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n"; return 1; }
-    else
+    if [[ "$AUTOMODE" == "true" ]]; then
         # Why we need pipefail : https://stackoverflow.com/a/6872163
-        apt-get "$@" 2>&1 | tee -a "$YUNOHOST_LOG" || return 1
+        apt-get "$@" 2>&1 | tee -a "$YUNOHOST_LOG"
+        ret="$?"
+    else
+        if _apt_with_progress "$@"; then
+            ret=0
+            printf "$resetline    $bold${green}Done$normal"
+        else
+            ret=1
+            printf "$resetline    $bold${red}'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n";
+        fi
     fi
     set +o pipefail
+    return "$ret"
 }
 
 function apt_update() {
@@ -245,8 +258,7 @@ function apt_install() {
 
 function check_assertions()
 {
-    if [[ $DISTRIB == "stable" ]]
-    then
+    if [[ $DISTRIB == "stable" ]]; then
         error "Only unstable and testing branches are supported for Bookworm right now. We ABSOLUTELY DISCOURAGE using YunoHost Bookworm in any sort of production setup right now UNLESS YOU ARE A POWER-USER. Everything is in BETA STAGE ONLY."
         return 1
     fi
@@ -254,16 +266,20 @@ function check_assertions()
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
-    [[ -f "/etc/debian_version" ]] || { error "This script can only be ran on Debian 12 (Bookworm)."; return 1; }
+    if [[ ! -f "/etc/debian_version" ]]; then
+        error "This script can only be ran on Debian 12 (Bookworm)."
+        return 1
+    fi
 
     # Assert we're on Bookworm
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
     # TODO: remove the line with "bookworm/sid"
-    [[ "$(cat /etc/debian_version)" =~ ^12.* ]] \
-    || [[ "$(cat /etc/debian_version)" =~ "bookworm/sid" ]] \
-    || { error "YunoHost is only available for the version 12 (Bookworm) of Debian, you are using '$(cat /etc/debian_version)'."; return 1; }
-
+    debian_version=$(cat /etc/debian_version)
+    if ! [[ "$debian_version" =~ ^12.*  ]] && ! [[ "$debian_version" =~ "bookworm/sid" ]]; then
+        error "YunoHost is only available for the version 12 (Bookworm) of Debian, you are using '$(cat /etc/debian_version)'."
+        return 1
+    fi
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
@@ -275,7 +291,10 @@ function check_assertions()
     fi
 
     # Assert we're root
-    [[ "$(id -u)" == "0" ]] || { error "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."; return 1; }
+    if [[ "$(id -u)" != "0" ]]; then
+        error "This script must be run as root. On most setups, the command 'sudo -i' can be run first to become root."
+        return 1
+    fi
 
     # Assert Internet is reachable
     if ! check_connection 30; then
@@ -283,29 +302,43 @@ function check_assertions()
     fi
 
     # Assert curl is setup
-    if ! command -v curl >/dev/null 2>&1; then
-        apt_install curl || { error "Yunohost installer requires curl to be installed, but it failed to install it."; return 1; }
+    if ! command -v curl >/dev/null 2>&1 && ! apt_install curl; then
+        error "Yunohost installer requires curl to be installed, but it failed to install it."
+        return 1
     fi
 
     # Check PATH var
-    [[ "$PATH" == *"/sbin"* ]] || { error "Your environment PATH variable must contains /sbin directory. Maybe try running 'PATH=/sbin:\$PATH' to fix this."; return 1; }
+    if [[ "$PATH" != *"/sbin"* ]]; then
+        error "Your environment PATH variable must contains /sbin directory. Maybe try running 'PATH=/sbin:\$PATH' to fix this."
+        return 1
+    fi
 
     # Assert systemd is installed
-    command -v systemctl > /dev/null || { error "YunoHost requires systemd to be installed."; return 1; }
+    if ! command -v systemctl > /dev/null; then
+        error "YunoHost requires systemd to be installed."
+        return 1
+    fi
 
     # Check that kernel is >= 3.12, otherwise systemd won't work properly. Cf. https://github.com/systemd/systemd/issues/5236#issuecomment-277779394
-    dpkg --compare-versions "$(uname -r)" "ge" "3.12" || { error "YunoHost requires a kernel >= 3.12. Please consult your hardware documentation or VPS provider to learn how to upgrade your kernel."; return 1; }
+    if dpkg --compare-versions "$(uname -r)" "lt" "3.12"; then
+        error "YunoHost requires a kernel >= 3.12. Please consult your hardware documentation or VPS provider to learn how to upgrade your kernel."
+        return 1
+    fi
 
     # Check we aren't running in docker or other weird containers that we can't probably install on
-    systemd-detect-virt | grep -v -q -w "docker\|container-other" || [[ "$FORCE" == "true" ]] \
-        || { error "It seems like you are trying to install YunoHost in docker or a weird container technology which probably is not supported by this install script (or YunoHost as a whole). If you know what you are doing, you can run this script with -f."; return 1; }
-
+    if systemd-detect-virt | grep -v -q -w "docker\|container-other" && [[ "$FORCE" != "true" ]]; then
+        error "It seems like you are trying to install YunoHost in docker or a weird container technology which probably is not supported by this install script (or YunoHost as a whole). If you know what you are doing, you can run this script with -f."
+        return 1
+    fi
     # Check possible conflict with apache, bind9.
-    [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'bind9\s')" ]] || [[ "$FORCE" == "true" ]] \
-        || { error "Bind9 is installed on your system. Yunohost conflicts with Bind9 because it requires dnsmasq. To be able to run this script, you should first run 'apt remove bind9 --purge --autoremove'."; return 1; }
-
-    [[ -z "$(dpkg --get-selections | grep -v deinstall | grep 'apache2\s')" ]] || [[ "$FORCE" == "true" ]] \
-        || { error "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To be able to run this script, you should first run 'apt remove apache2 --purge --autoremove'."; return 1; }
+    if dpkg --get-selections | grep -v deinstall | grep -q 'bind9\s' && [[ "$FORCE" != "true" ]]; then
+        error "Bind9 is installed on your system. Yunohost conflicts with Bind9 because it requires dnsmasq. To be able to run this script, you should first run 'apt remove bind9 --purge --autoremove'."
+        return 1
+    fi
+    if dpkg --get-selections | grep -v deinstall | grep 8Q 'apache2\s' && [[ "$FORCE" != "true" ]]; then
+        error "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To be able to run this script, you should first run 'apt remove apache2 --purge --autoremove'."
+        return 1
+    fi
 
 }
 
