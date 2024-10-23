@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+    # shellcheck disable=SC2059
 
 # Copyright (C) 2015-2023 YunoHost
 #
@@ -21,7 +22,8 @@ set -u
 
 # Globals
 
-readonly YUNOHOST_LOG="/var/log/yunohost-installation_$(date +%Y%m%d_%H%M%S).log"
+YUNOHOST_LOG="/var/log/yunohost-installation_$(date +%Y%m%d_%H%M%S).log"
+readonly YUNOHOST_LOG
 export DEBIAN_FRONTEND=noninteractive
 
 ###############################################################################
@@ -29,21 +31,21 @@ export DEBIAN_FRONTEND=noninteractive
 ###############################################################################
 
 function check_connection() {
-        TIMEOUT=$1
+    TIMEOUT=$1
 
-        while [ $TIMEOUT -gt 0 ]; do
-                ping -c 1 -W 2 yunohost.org 2>&1 >/dev/null && return 0
-                sleep 1
-                TIMEOUT=$((TIMEOUT-1))
-        done
+    while [ "$TIMEOUT" -gt 0 ]; do
+        ping -c 1 -W 2 yunohost.org > /dev/null 2>&1 && return 0
+        sleep 1
+        TIMEOUT=$((TIMEOUT - 1))
+    done
 
-        return 1
+    return 1
 }
 
 function usage() {
   cat << EOF
 Usage :
-  $(basename $0) [-a] [-d <DISTRIB>] [-h]
+  $(basename "$0") [-a] [-d <DISTRIB>] [-h]
 
 Options :
   -a      Enable automatic mode. No questions are asked.
@@ -130,41 +132,46 @@ function main()
 # Helpers                                                                     #
 ###############################################################################
 
-readonly normal=$(printf '\033[0m')
-readonly bold=$(printf '\033[1m')
-readonly faint=$(printf '\033[2m')
-readonly underline=$(printf '\033[4m')
-readonly negative=$(printf '\033[7m')
-readonly red=$(printf '\033[31m')
-readonly green=$(printf '\033[32m')
-readonly orange=$(printf '\033[33m')
-readonly blue=$(printf '\033[34m')
-readonly yellow=$(printf '\033[93m')
-readonly white=$(printf '\033[39m')
-readonly resetline=$(printf '\r\033[K')
+normal=$(printf '\033[0m')
+bold=$(printf '\033[1m')
+faint=$(printf '\033[2m')
+underline=$(printf '\033[4m')
+negative=$(printf '\033[7m')
+red=$(printf '\033[31m')
+green=$(printf '\033[32m')
+orange=$(printf '\033[33m')
+blue=$(printf '\033[34m')
+yellow=$(printf '\033[93m')
+white=$(printf '\033[39m')
+resetline=$(printf '\r\033[K')
+readonly normal bold faint underline negative red green orange blue yellow white resetline
+# Those variables are unused but we don't want a shellcheck warning
+: "$faint $underline $negative $yellow $white"
 
+# shellcheck disable=SC2317
 function success()
 {
   local msg=${1}
-  echo "[${bold}${green} OK ${normal}] ${msg}" | tee -a $YUNOHOST_LOG
+  echo "[${bold}${green} OK ${normal}] ${msg}" | tee -a "$YUNOHOST_LOG"
 }
 
 function info()
 {
   local msg=${1}
-  echo "[${bold}${blue}INFO${normal}] ${msg}" | tee -a $YUNOHOST_LOG
+  echo "[${bold}${blue}INFO${normal}] ${msg}" | tee -a "$YUNOHOST_LOG"
 }
 
+# shellcheck disable=SC2317
 function warn()
 {
   local msg=${1}
-  echo "[${bold}${orange}WARN${normal}] ${msg}" | tee -a $YUNOHOST_LOG >&2
+  echo "[${bold}${orange}WARN${normal}] ${msg}" | tee -a "$YUNOHOST_LOG" >&2
 }
 
 function error()
 {
   local msg=${1}
-  echo "[${bold}${red}FAIL${normal}] ${msg}" | tee -a $YUNOHOST_LOG >&2
+  echo "[${bold}${red}FAIL${normal}] ${msg}" | tee -a "$YUNOHOST_LOG" >&2
 }
 
 function die() {
@@ -174,6 +181,7 @@ function die() {
 }
 
 trap trapint 2
+# shellcheck disable=SC2317
 function trapint {
     echo ""
     die "Aborted"
@@ -187,35 +195,38 @@ function show_apt_progress {
     local message="$3"
 
     local done=$((${percent%.*}*40/100))
-    local todo=$((39 - $done))
+    local todo=$((39 - done))
 
-    local done_sub_bar="$(printf "%${done}s")"
-    local todo_sub_bar="$(printf "%${todo}s")"
+    local done_sub_bar todo_sub_bar
+    done_sub_bar="$(printf "%${done}s")"
+    todo_sub_bar="$(printf "%${todo}s")"
 
     echo -ne "$resetline  $bold$blue$title$normal [${done_sub_bar// /=}>${todo_sub_bar}] ${percent:0:4}% ${message:0:40}"
 }
 
 function _apt() {
     set -o pipefail
-  	echo "===================" >>$YUNOHOST_LOG
-	echo "Running: apt-get $*" >>$YUNOHOST_LOG
-	echo "===================" >>$YUNOHOST_LOG
-    if [[ "$AUTOMODE" == "false" ]];
-    then
+    cat << EOF >> "$YUNOHOST_LOG"
+===================
+Running: apt-get $*
+===================
+EOF
+    if [[ "$AUTOMODE" == "false" ]]; then
         local title=""
-        apt-get $* -o 'APT::Status-Fd=3' 3>&1 >>$YUNOHOST_LOG 2>&1 \
-        | while read line; do
-            local wat=$(echo $line | cut -d: -f1)
-            local percent=$(echo $line | cut -d: -f3)
-            local message=$(echo $line | cut -d: -f2)
-	    [[ $wat == "dlstatus" ]] && local title="Downloading" || local title="Installing"
-            show_apt_progress $percent "$title" "$message";
-        done \
-	&& printf "$resetline    $bold${green}Done$normal" \
-	|| { printf "$resetline    $bold${red}'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n"; return 1; }
+        apt-get "$@" -o 'APT::Status-Fd=3' 3>&1 >> "$YUNOHOST_LOG" 2>&1 \
+            | while read -r line; do
+                local wat percent message
+                wat=$(echo "$line" | cut -d: -f1)
+                percent=$(echo "$line" | cut -d: -f3)
+                message=$(echo "$line" | cut -d: -f2)
+                [[ $wat == "dlstatus" ]] && local title="Downloading" || local title="Installing"
+                show_apt_progress "$percent" "$title" "$message";
+            done \
+            && printf "$resetline    $bold${green}Done$normal" \
+            || { printf "$resetline    $bold${red}'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n"; return 1; }
     else
         # Why we need pipefail : https://stackoverflow.com/a/6872163
-        apt-get $* 2>&1 | tee -a $YUNOHOST_LOG || return 1
+        apt-get "$@" 2>&1 | tee -a "$YUNOHOST_LOG" || return 1
     fi
     set +o pipefail
 }
@@ -225,7 +236,7 @@ function apt_update() {
 }
 
 function apt_install() {
-    _apt install --assume-yes -o Dpkg::Options::="--force-confold" $*
+    _apt install --assume-yes -o Dpkg::Options::="--force-confold" "$@"
 }
 
 ###############################################################################
@@ -256,7 +267,7 @@ function check_assertions()
     # Forbid people from installing on Ubuntu or Linux mint ...
     if [[ -f "/etc/lsb-release" ]];
     then
-        if cat /etc/lsb-release | grep -q -i "Ubuntu\|Mint"
+        if grep -q -i "Ubuntu\|Mint" /etc/lsb-release
         then
             error "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 12 (Bookworm)."
             return 1
@@ -272,7 +283,7 @@ function check_assertions()
     fi
 
     # Assert curl is setup
-    if ! command -v curl 2>&1 >/dev/null; then
+    if ! command -v curl >/dev/null 2>&1; then
         apt_install curl || { error "Yunohost installer requires curl to be installed, but it failed to install it."; return 1; }
     fi
 
@@ -302,7 +313,7 @@ function confirm_installation() {
 
     [[ "$AUTOMODE" == "true" ]] && return 0
 
-    cat << EOF | tee -a $YUNOHOST_LOG
+    cat << EOF | tee -a "$YUNOHOST_LOG"
 $bold
   ╭───────────────────────╮
   │ YunoHost Installation │
@@ -314,13 +325,13 @@ $normal
 
 EOF
 
-    read -p "    Are you sure you want to proceed (y/n) ? " choice < /dev/tty
-    choice="$(echo $choice | tr '[A-Z]' '[a-z]')"
+    read -r -p "    Are you sure you want to proceed (y/n) ? " choice < /dev/tty
+    choice="$(echo "$choice" | tr '[:upper:]' '[:lower:]')"
     [[ "$choice" == "yes" ]] || [[ "$choice" == "y" ]] || { error "Aborting"; return 1; }
 
     if [[ "$DISTRIB" == "unstable" ]]
     then
-    	cat << EOF | tee -a $YUNOHOST_LOG
+        cat << EOF | tee -a "$YUNOHOST_LOG"
 
   • You are installing the unstable/alpha version of YunoHost 12/Bookworm.
 
@@ -331,8 +342,8 @@ EOF
                         THINGS **WILL** BREAK.
 
 EOF
-        read -p "    Type 'Yes, I understand' if you understand: " choice < /dev/tty
-    	[[ "$choice" == "Yes, I understand" ]] || { error "Aborting"; return 1; }
+        read -r -p "    Type 'Yes, I understand' if you understand: " choice < /dev/tty
+        [[ "$choice" == "Yes, I understand" ]] || { error "Aborting"; return 1; }
     fi
 
     # SSH config warning
@@ -356,7 +367,7 @@ EOF
 
         if [[ -n "$root_login_warning" ]] || [[ -n "$ssh_port_warning" ]]
         then
-            cat << EOF | tee -a $YUNOHOST_LOG
+            cat << EOF | tee -a "$YUNOHOST_LOG"
 
   • Additionally, it is encouraged to let YunoHost manage the SSH configuration.
     However, you should be aware that:
@@ -365,8 +376,8 @@ $(test -n "$ssh_port_warning" && echo -e "$ssh_port_warning")
     (Note that this will only be effective *after* you run YunoHost's postinstall)
 
 EOF
-            read -p "    Should YunoHost override the SSH configuration (y/n) ? " choice < /dev/tty
-            choice="$(echo $choice | tr '[A-Z]' '[a-z]')"
+            read -r -p "    Should YunoHost override the SSH configuration (y/n) ? " choice < /dev/tty
+            choice="$(echo "$choice" | tr '[:upper:]' '[:lower:]')"
             if [[ "$choice" != "yes" ]] && [[ "$choice" != "y" ]]
             then
                 # Keep a copy to be restored during the postinstall
@@ -376,7 +387,7 @@ EOF
         fi
     fi
 
-    cat << EOF | tee -a $YUNOHOST_LOG
+    cat << EOF | tee -a "$YUNOHOST_LOG"
 
   🚀 ${bold}Let's go !$normal
 
@@ -388,9 +399,9 @@ EOF
 
 function upgrade_system() {
 
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "$bold  1/5 • Running system upgrades$normal" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "$bold  1/5 • Running system upgrades$normal" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
 
     apt_update || return 1
 
@@ -411,17 +422,17 @@ function upgrade_system() {
         apt_install rpi-update || return 1
 
             if [[ "$BUILD_IMAGE" == "false" ]] ; then
-                (rpi-update 2>&1 | tee -a $YUNOHOST_LOG) || return 1
+                (rpi-update 2>&1 | tee -a "$YUNOHOST_LOG") || return 1
         fi
     fi
 }
 
 function boring_workarounds() {
 
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "$bold  2/5 • Install dependencies needed before the main install$normal" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "$bold  2/5 • Install dependencies needed before the main install$normal" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
 
     # ###################################################################### #
     # Dependencies that must be installed prior to the rest, for reasons ... #
@@ -430,10 +441,10 @@ function boring_workarounds() {
 
     apt_install --no-install-recommends lsb-release dialog curl gnupg apt-transport-https adduser debconf debhelper dh-autoreconf locales
 
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "$bold  3/5 • Apply various tweaks to prepare installation$normal" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "$bold  3/5 • Apply various tweaks to prepare installation$normal" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
 
     # #################################### #
     # Attempt to fix the usual locale mess #
@@ -516,10 +527,10 @@ function boring_workarounds() {
 
 function setup_package_source() {
 
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "$bold  4/5 • Adding YunoHost repository to apt$normal" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "$bold  4/5 • Adding YunoHost repository to apt$normal" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
 
     local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
 
@@ -542,10 +553,10 @@ function setup_package_source() {
 
 function install_yunohost_packages() {
 
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
-    echo "$bold  5/5 • Installing YunoHost$normal" | tee -a $YUNOHOST_LOG
-    echo "" | tee -a $YUNOHOST_LOG
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
+    echo "$bold  5/5 • Installing YunoHost$normal" | tee -a "$YUNOHOST_LOG"
+    echo "" | tee -a "$YUNOHOST_LOG"
 
     debconf-set-selections << EOF
 slapd slapd/password1      password yunohost
@@ -582,8 +593,10 @@ EOF
 
 function conclusion() {
     # Get first local IP and global IP
-    local local_ip=$(hostname --all-ip-address | tr ' ' '\n' | grep -v ":" | head -n1)
-    local global_ip=$(curl https://ip.yunohost.org 2>/dev/null)
+    local local_ip
+    local_ip=$(hostname --all-ip-address | tr ' ' '\n' | grep -v ":" | head -n1)
+    local global_ip
+    global_ip=$(curl https://ip.yunohost.org 2>/dev/null)
     local no_ip=""
 
     # Will ignore local ip if it's already the global IP (e.g. for some VPS)
@@ -593,21 +606,21 @@ function conclusion() {
     local width=79
     [[ -z "$local_ip" ]] || {
         local_ip=$(echo -e "\n  │    - https://$local_ip/ (local IP, if self-hosting at home)")
-        local nb_spaces=$(( $width - ${#local_ip} ))
+        local nb_spaces=$(( width - ${#local_ip} ))
         local_ip+="$(printf "%${nb_spaces}s")│"
     }
     [[ -z "$global_ip" ]] || {
         global_ip=$(echo -e "\n  │    - https://$global_ip/ (global IP, if you're on a VPS)")
-        local nb_spaces=$(( $width - ${#global_ip} ))
+        local nb_spaces=$(( width - ${#global_ip} ))
         global_ip+="$(printf "%${nb_spaces}s")│"
     }
     [[ -n "$local_ip" ]] || [[ -n "$global_ip" ]] || {
         no_ip=$(echo -e "\n  │    - (no local nor global IP detected ?)")
-        local nb_spaces=$(( $width - ${#no_ip} ))
+        local nb_spaces=$(( width - ${#no_ip} ))
         no_ip+="$(printf "%${nb_spaces}s")│"
     }
 
-    cat << EOF | tee -a $YUNOHOST_LOG
+    cat << EOF | tee -a "$YUNOHOST_LOG"
 
 
   🎉 ${bold}YunoHost installation completed!$normal
@@ -652,17 +665,19 @@ function is_raspbian() {
 ###############################################################################
 
 function clean_image() {
-    # Delete SSH keys
-    rm -f /etc/ssh/ssh_host_* >> $YUNOHOST_LOG 2>&1
-    yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa >> $YUNOHOST_LOG 2>&1
-    yes | ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa >> $YUNOHOST_LOG 2>&1
-    yes | ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa -b 521 >> $YUNOHOST_LOG 2>&1
+    {
+        # Delete SSH keys
+        rm -f /etc/ssh/ssh_host_*
+        yes | ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa
+        yes | ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
+        yes | ssh-keygen -f /etc/ssh/ssh_host_ecdsa_key -N '' -t ecdsa -b 521
 
-    # Deleting logs ...
-    find /var/log -type f -exec rm {} \; >> $YUNOHOST_LOG 2>&1
+        # Deleting logs ...
+        find /var/log -type f -exec rm {} \;
 
-    # Purging apt ...
-    apt-get clean >> $YUNOHOST_LOG 2>&1
+        # Purging apt ...
+        apt-get clean
+    } >> "$YUNOHOST_LOG" 2>&1
 }
 
 
