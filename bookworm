@@ -134,19 +134,17 @@ function main()
 
 normal=$(printf '\033[0m')
 bold=$(printf '\033[1m')
-faint=$(printf '\033[2m')
-underline=$(printf '\033[4m')
-negative=$(printf '\033[7m')
+# faint=$(printf '\033[2m')
+# underline=$(printf '\033[4m')
+# negative=$(printf '\033[7m')
 red=$(printf '\033[31m')
 green=$(printf '\033[32m')
 orange=$(printf '\033[33m')
 blue=$(printf '\033[34m')
-yellow=$(printf '\033[93m')
-white=$(printf '\033[39m')
+# yellow=$(printf '\033[93m')
+# white=$(printf '\033[39m')
 resetline=$(printf '\r\033[K')
-readonly normal bold faint underline negative red green orange blue yellow white resetline
-# Those variables are unused but we don't want a shellcheck warning
-: "$faint $underline $negative $yellow $white"
+readonly normal bold red green orange blue resetline
 
 # shellcheck disable=SC2317
 function success()
