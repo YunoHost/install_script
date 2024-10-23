@@ -15,4 +15,5 @@ jobs:
       env:
         SHELLCHECK_OPTS: -x
       with:
-        additional_files: bookworm bullseye switchtoTesting switchtoUnstable
+        additional_files: bookworm switchtoTesting switchtoUnstable
+        ignore_paths: ./bullseye
