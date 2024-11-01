@@ -104,7 +104,7 @@ function main()
     upgrade_system                || die "Failed to upgrade the system"
     boring_workarounds            || die "Failed to run the boring workarounds"
     setup_package_source          || die "Setting up deb package sources failed"
-    install_yunohost_packages     || die "Installation of Yunohost packages failed"
+    install_yunohost_packages     || die "Installation of YunoHost packages failed"
 
     # For some reason sometimes dbus is not properly started/enabled ...
     if [[ "$BUILD_IMAGE" == "false" ]] ; then
@@ -334,7 +334,7 @@ function check_assertions()
     # Assert curl is set up, try to install it otherwise
     if ! command -v curl >/dev/null 2>&1; then
         if ! apt_install curl; then
-            die "Yunohost installer requires curl to be installed, but it failed to install it."
+            die "YunoHost installer requires curl to be installed, but it failed to install it."
         fi
     fi
 
@@ -345,10 +345,10 @@ function check_assertions()
 
     # Check possible conflict with apache, bind9.
     if dpkg --get-selections | grep -v deinstall | grep -q 'apache2\s'; then
-        forceable_die "Apache is installed on your system. Yunohost conflicts with apache2 because it requires nginx. To prevent this conflict, you should first run 'apt remove apache2 --purge --autoremove'."
+        forceable_die "Apache is installed on your system. YunoHost conflicts with apache2 because it requires nginx. To prevent this conflict, you should first run 'apt remove apache2 --purge --autoremove'."
     fi
     if dpkg --get-selections | grep -v deinstall | grep -q 'bind9\s'; then
-        forceable_die "Bind9 is installed on your system. Yunohost conflicts with Bind9 because it requires dnsmasq. To prevent this conflict, you should first run 'apt remove bind9 --purge --autoremove'."
+        forceable_die "Bind9 is installed on your system. YunoHost conflicts with Bind9 because it requires dnsmasq. To prevent this conflict, you should first run 'apt remove bind9 --purge --autoremove'."
     fi
 }
 
@@ -516,7 +516,7 @@ function boring_workarounds() {
     # Workarounds for avahi    #
     # ######################## #
 
-    # When attempting several installation of Yunohost on the same host
+    # When attempting several installation of YunoHost on the same host
     # with a light VM system like LXC
     # we hit a bug with avahi-daemon postinstallation
     # This is described in detail in https://github.com/lxc/lxc/issues/25
@@ -661,21 +661,21 @@ function conclusion() {
   🎉 ${bold}YunoHost installation completed!$normal
 
   ╭───────────────────────────────────────────────────────────────────────────╮
-  │ You should now proceed with Yunohost post-installation.                   │
+  │ You should now proceed with YunoHost post-installation.                   │
   │ This is where you will be asked for:                                      │
-  │ • the main domain of your server ;                                        │
-  │ • the administration password ;                                           │
+  │ • the main domain of your server;                                         │
+  │ • the administration password;                                            │
   │ • the name and password of the first user, which will also be admin.      │
   │                                                                           │
   │ You can perform this step, either:                                        │
   │ • from the command line, by running 'yunohost tools postinstall' as root  │
-  │ • or from your web browser, by accessing :                                │${local_ip}${global_ip}${no_ip}
+  │ • or from your web browser, by accessing:                                 │${local_ip}${global_ip}${no_ip}
   │                                                                           │
   │ If this is your first time with YunoHost, it is strongly recommended to   │
   │ take time to read the administator documentation and in particular the    │
   │ sections 'Finalizing your setup' and 'Getting to know YunoHost'.          │
   │                                                                           │
-  │ It is available at the following URL : ➡️  https://yunohost.org/admindoc   │
+  │ It is available at the following URL: ➡️  https://yunohost.org/admindoc   │
   ╰───────────────────────────────────────────────────────────────────────────╯
 
 
