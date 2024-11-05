@@ -191,14 +191,13 @@ prompt_confirm() {
     if (( $# > 1 )); then
         check="$2"
     else
-        check="@(y|yes)"
+        check="@([yY]|[yY][eE][sS])"
         prompt="$prompt [y/n]: "
     fi
 
     shopt -s extglob
     while true; do
         read -r -p "$prompt" REPLY < /dev/tty
-        REPLY="$(echo "$REPLY" | tr '[:upper:]' '[:lower:]')"
         case "$REPLY" in
         $check) echo ; return 0 ;;
         n|no) echo ; return 1 ;;
