@@ -6,6 +6,10 @@ Patching sources.list to disable testing repository...
 ----
 EOF
 
+if [ -f "/etc/apt/sources.list.d/yunohost.sources" ]; then
+    sed -i 's|^\s*Components\s*:\s*.*$|Components: stable|' "/etc/apt/sources.list.d/yunohost.sources"
+fi
+
 readarray -d '' apt_files < <(find /etc/apt/sources.list /etc/apt/sources.list.d -type f -print0)
 for FILE in "${apt_files[@]}"; do
     # Remove 'testing' and 'unstable' in lines using the yunohost repo
