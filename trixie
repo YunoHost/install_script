@@ -480,6 +480,9 @@ function boring_workarounds() {
 
     apt_install --no-install-recommends lsb-release dialog curl gnupg apt-transport-https adduser debconf debhelper dh-autoreconf locales
 
+    # For some reason there's a loop dependency not managed by apt here, so installing it before yunohost.
+    apt_install --mark-auto python3-setuptools
+
     echo "" | tee -a "$YUNOHOST_LOG"
     echo "" | tee -a "$YUNOHOST_LOG"
     echo "$bold  3/5 • Apply various tweaks to prepare installation$normal" | tee -a "$YUNOHOST_LOG"
