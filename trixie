@@ -558,17 +558,6 @@ function boring_workarounds() {
     # We need to make it mutable for the resolvconf dependency to be installed
     chattr -i /etc/resolv.conf 2>/dev/null || true
 
-    # ##################################################### #
-    # lexicon and python3-lexicon not packaged on trixie... #
-    # ##################################################### #
-    # See upstream bug report: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1086560
-    echo "${bold}${red}  Installing python3-lexicon, this is a workaround to be removed before release!$normal" | tee -a "$YUNOHOST_LOG"
-
-    # Download it from sid...
-    curl http://ftp.it.debian.org/debian/pool/main/l/lexicon/lexicon_3.21.1-1_all.deb -o /tmp/lexicon.deb
-    curl http://ftp.it.debian.org/debian/pool/main/l/lexicon/python3-lexicon_3.21.1-1_all.deb -o /tmp/python3-lexicon.deb
-    apt_install /tmp/lexicon.deb /tmp/python3-lexicon.deb
-
     # Done
     printf "$resetline    $bold${green}Done$normal"
 }
