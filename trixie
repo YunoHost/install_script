@@ -562,7 +562,8 @@ function boring_workarounds() {
     chattr -i /etc/resolv.conf 2>/dev/null || true
 
     # Done
-    printf "$resetline    $bold${green}Done$normal"
+    printf "$resetline    $bold${green}Done!$normal"
+    echo
 }
 
 function setup_package_source() {
