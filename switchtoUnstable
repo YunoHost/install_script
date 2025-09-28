@@ -1,16 +1,37 @@
 #!/usr/bin/env bash
 
-cat << EOF
+SOURCES_FILE=/etc/apt/sources.list.d/yunohost.sources
+LEVEL="unstable"
+COMPONENTS="stable testing unstable"
+
+set_sources_components() {
+    cat << EOF
+----
+Patching $SOURCES_FILE to use $LEVEL repository...
+----
+EOF
+    sed -i 's|^\(Components: \).*$|\1'"$COMPONENTS" "$SOURCES_FILE"
+}
+
+set_lists_components() {
+    cat << EOF
 ----
 Patching sources.list to enable unstable repository...
 ----
 EOF
 
-readarray -d '' apt_files < <(find /etc/apt/sources.list /etc/apt/sources.list.d -type f -print0)
-for FILE in "${apt_files[@]}"; do
-    # (Append 'testing' at the end of lines starting with the yunohost repo..)
-    sed -i 's@^deb http://forge.yunohost.org.*@& testing unstable@' "$FILE"
-done
+    readarray -d '' apt_files < <(find /etc/apt/sources.list /etc/apt/sources.list.d -type f -print0)
+    for FILE in "${apt_files[@]}"; do
+        # (Append 'testing' at the end of lines starting with the yunohost repo..)
+        sed -i 's@^deb http://forge.yunohost.org.*@& testing unstable@' "$FILE"
+    done
+}
+
+if [[ -f "$SOURCES_FILE" ]]; then
+    set_sources_components
+else
+    set_lists_components
+fi
 
 cat << EOF
 ----
@@ -21,7 +42,7 @@ apt-get update
 
 cat << EOF
 ----
-Running 'apt-get dist-upgrade'
+Running 'apt-get full-upgrade'
 ----
 EOF
-apt-get dist-upgrade -y
+apt-get full-upgrade -y
