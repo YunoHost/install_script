@@ -146,7 +146,7 @@ blue=$(printf '\033[34m')
 resetline=$(printf '\r\033[K')
 readonly normal bold red green orange blue resetline
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 function success()
 {
   local msg=${1}
@@ -159,7 +159,7 @@ function info()
   echo "[${bold}${blue}INFO${normal}] ${msg}" | tee -a "$YUNOHOST_LOG"
 }
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 function warn()
 {
   local msg=${1}
@@ -179,7 +179,7 @@ function die() {
 }
 
 trap trapint 2
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 function trapint {
     echo ""
     die "Aborted"
