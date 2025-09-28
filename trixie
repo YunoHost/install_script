@@ -566,28 +566,33 @@ function boring_workarounds() {
     echo
 }
 
+
+
 function setup_package_source() {
     echo "" | tee -a "$YUNOHOST_LOG"
     echo "" | tee -a "$YUNOHOST_LOG"
     echo "$bold  4/5 • Adding YunoHost repository to apt$normal" | tee -a "$YUNOHOST_LOG"
     echo "" | tee -a "$YUNOHOST_LOG"
 
-    local CUSTOMAPT=/etc/apt/sources.list.d/yunohost.list
-
     # Debian repository
-
-    local CUSTOMDEB="deb [signed-by=/usr/share/keyrings/yunohost-trixie.gpg] http://forge.yunohost.org/debian/ trixie stable"
-
-    if [[ "$DISTRIB" == "stable" ]] ; then
-        echo "$CUSTOMDEB" > $CUSTOMAPT
-    elif [[ "$DISTRIB" == "testing" ]] ; then
-        echo "$CUSTOMDEB testing" > $CUSTOMAPT
+    local components="stable"
+    if [[ "$DISTRIB" == "testing" ]] ; then
+        components="$components testing"
     elif [[ "$DISTRIB" == "unstable" ]] ; then
-        echo "$CUSTOMDEB testing unstable" > $CUSTOMAPT
+        components="$components testing unstable"
     fi
 
+    local deb_sources="
+Types: deb
+URIs: http://repo.yunohost.org/debian/
+Suites: trixie
+Components: $components
+Signed-By: /etc/apt/trusted.gpg.d/yunohost-trixie.gpg
+"
+    echo "$deb_sources" > /etc/apt/sources.list.d/yunohost.sources
+
     # Add YunoHost repository key to the keyring
-    curl --fail --silent https://forge.yunohost.org/yunohost_trixie.asc | gpg --dearmor > /usr/share/keyrings/yunohost-trixie.gpg
+    curl --fail --silent https://repo.yunohost.org/keys/yunohost_trixie.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/yunohost-trixie.gpg
     apt_update
 }
 
