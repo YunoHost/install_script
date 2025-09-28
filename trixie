@@ -198,6 +198,7 @@ prompt_confirm() {
     shopt -s extglob
     while true; do
         read -r -p "$prompt" REPLY < /dev/tty
+        # shellcheck disable=SC2254
         case "$REPLY" in
         $check) echo ; return 0 ;;
         n|no) echo ; return 1 ;;
