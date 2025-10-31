@@ -390,6 +390,20 @@ EOF
         if ! prompt_confirm "    Type 'Yes, I understand' if you understand: " "Yes, I understand"; then
             die "Aborting on user request."
         fi
+    elif [[ "$DISTRIB" == "testing" ]]; then
+        cat << EOF | tee -a "$YUNOHOST_LOG"
+
+  • You are installing the testing/beta version of YunoHost 13/Trixie.
+
+        You should be warned that THIS IS BETA-STAGE DEVELOPMENT.
+            THIS IS ONLY MEANT FOR *TESTING* OR *POWER-USERS*
+
+        THINGS **MAY** BREAK AND YOU MAY HAVE TO DEBUG MANUALLY.
+
+EOF
+        if ! prompt_confirm "    Type 'Yes, I understand' if you understand: " "Yes, I understand"; then
+            die "Aborting on user request."
+        fi
     fi
 
     # SSH config warning
