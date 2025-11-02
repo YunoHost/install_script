@@ -519,7 +519,7 @@ function boring_workarounds() {
 
     # If no /etc/environment exists, default to en_US.UTF-8
     grep -q LC_ALL /etc/environment || echo 'LC_ALL="en_US.UTF-8"' >> /etc/environment
-    source /etc/environment
+    source /etc/environment 2>/dev/null
     export LC_ALL
 
     # ######################## #
