@@ -657,10 +657,10 @@ function conclusion() {
 
     # Fallback to IPv6
     if [[ -z "$local_ip" ]]; then
-        local_ip=$(hostname --all-ip-address | tr ' ' '\n' | grep ":" | head -n1)
+        local_ip="[$(hostname --all-ip-address | tr ' ' '\n' | grep ":" | head -n1)]"
     fi
     if [[ -z "$global_ip" ]]; then
-        global_ip=$(curl https://ipv6.yunohost.org 2>/dev/null || true)
+        global_ip="[$(curl https://ipv6.yunohost.org 2>/dev/null || true)]"
     fi
 
     # Will ignore local ip if it's already the global IP (e.g. for some VPS)
