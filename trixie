@@ -651,11 +651,17 @@ EOF
 
 function conclusion() {
     # Get first local IP and global IP
-    local local_ip
+    local local_ip global_ip no_ip=""
     local_ip=$(hostname --all-ip-address | tr ' ' '\n' | grep -v ":" | head -n1)
-    local global_ip
-    global_ip=$(curl https://ip.yunohost.org 2>/dev/null)
-    local no_ip=""
+    global_ip=$(curl https://ipv4.yunohost.org 2>/dev/null || true)
+
+    # Fallback to IPv6
+    if [[ -z "$local_ip" ]]; then
+        local_ip=$(hostname --all-ip-address | tr ' ' '\n' | grep ":" | head -n1)
+    fi
+    if [[ -z "$global_ip" ]]; then
+        global_ip=$(curl https://ipv6.yunohost.org 2>/dev/null || true)
+    fi
 
     # Will ignore local ip if it's already the global IP (e.g. for some VPS)
     if [[ "$local_ip" == "$global_ip" ]]; then
@@ -665,14 +671,16 @@ function conclusion() {
     # Formatting
     local width=79
     if [[ -n "$local_ip" ]]; then
-        local_ip=$(echo -e "\n  │    - https://$local_ip/ (local IP, if self-hosting at home)")
+        local_ip=$(echo -e "\n  │    - https://$local_ip/")
         local nb_spaces=$(( width - ${#local_ip} ))
         local_ip+="$(printf "%${nb_spaces}s")│"
+        local_ip+=$(echo -e "\n  │        (local IP, if self-hosting at home)                                │")
     fi
     if [[ -n "$global_ip" ]]; then
-        global_ip=$(echo -e "\n  │    - https://$global_ip/ (global IP, if you're on a VPS)")
+        global_ip=$(echo -e "\n  │    - https://$global_ip/")
         local nb_spaces=$(( width - ${#global_ip} ))
         global_ip+="$(printf "%${nb_spaces}s")│"
+        global_ip+=$(echo -e "\n  │        (global IP, if you're on a VPS)                                    │")
     fi
     if [[ -z "$local_ip" ]] && [[ -z "$global_ip" ]]; then
         no_ip=$(echo -e "\n  │    - (no local nor global IP detected ?)")
