@@ -602,12 +602,12 @@ Types: deb
 URIs: http://repo.yunohost.org/debian/
 Suites: trixie
 Components: $components
-Signed-By: /etc/apt/trusted.gpg.d/yunohost-trixie.gpg
+Signed-By: /usr/share/keyrings/yunohost-trixie.gpg
 "
     echo "$deb_sources" > /etc/apt/sources.list.d/yunohost.sources
 
     # Add YunoHost repository key to the keyring
-    curl --fail --silent https://repo.yunohost.org/keys/yunohost_trixie.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/yunohost-trixie.gpg
+    curl --fail --silent https://repo.yunohost.org/keys/yunohost_trixie.asc | gpg -o /usr/share/keyrings/yunohost-trixie.gpg --dearmor
     apt_update
 }
 
