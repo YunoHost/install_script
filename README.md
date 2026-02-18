@@ -37,4 +37,4 @@ Options :
 
 Option `-a` is useful for fully automated headless installations.
 
-The [post-installation](https://yunohost.org/#/postinstall) will have to be performed later.
+The [post-installation](https://doc.yunohost.org/category/after-installation) will have to be performed later.
