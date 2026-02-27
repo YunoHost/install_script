@@ -597,14 +597,14 @@ function setup_package_source() {
         components="$components testing unstable"
     fi
 
-    local deb_sources="
+    local deb_sources="\
 Types: deb
-URIs: http://repo.yunohost.org/debian/
+URIs: https://repo.yunohost.org/debian/
 Suites: trixie
 Components: $components
 Signed-By: /usr/share/keyrings/yunohost-trixie.gpg
 "
-    echo "$deb_sources" > /etc/apt/sources.list.d/yunohost.sources
+    echo -n "$deb_sources" > yunohost.sources
 
     # Add YunoHost repository key to the keyring
     curl --fail --silent https://repo.yunohost.org/keys/yunohost_trixie.asc | gpg -o /usr/share/keyrings/yunohost-trixie.gpg --dearmor
