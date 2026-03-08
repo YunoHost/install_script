@@ -262,7 +262,7 @@ EOF
     else
         if _apt_with_progress "$@"; then
             ret=0
-            printf "$resetline    $bold${green}Done$normal"
+            printf "$resetline    $bold${green}Done!$normal"
         else
             ret=1
             printf "$resetline    $bold${red}'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n";
