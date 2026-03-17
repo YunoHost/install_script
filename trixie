@@ -248,6 +248,8 @@ function _apt_with_progress() {
         done
 }
 
+_apt_retried=false
+
 function _apt() {
     set -o pipefail
     cat << EOF >> "$YUNOHOST_LOG"
@@ -269,6 +271,11 @@ EOF
         fi
     fi
     set +o pipefail
+    if [[ "$ret" == "1" ]] && [[ "$_apt_retried" == false ]]; then
+        warn "Retrying apt in case this was just a transient download issue..."
+        _apt_retried=true
+        _apt "$@"
+    fi
     return "$ret"
 }
 
