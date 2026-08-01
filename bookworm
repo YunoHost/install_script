@@ -34,7 +34,13 @@ function check_connection() {
     TIMEOUT=$1
 
     while [ "$TIMEOUT" -gt 0 ]; do
-        ping -c 1 -W 2 yunohost.org > /dev/null 2>&1 && return 0
+        if command -v curl >/dev/null 2>&1; then
+            curl -I -m 2 http://yunohost.org -o /dev/null --silent && return 0
+        elif command -v wget >/dev/null 2>&1; then
+            wget --spider --timeout 2 http://yunohost.org -O /dev/null --quiet && return 0
+        else
+            ping -c 1 -W 2 yunohost.org > /dev/null 2>&1 && return 0
+        fi
         sleep 1
         TIMEOUT=$((TIMEOUT - 1))
     done
