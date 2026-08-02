@@ -262,6 +262,16 @@ function apt_install() {
 
 function check_assertions()
 {
+    # Forbid people from installing on Ubuntu or Linux mint ...
+    if [[ -f "/etc/lsb-release" ]];
+    then
+        if grep -q -i "Ubuntu\|Mint" /etc/lsb-release
+        then
+            error "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 12 (Bookworm)."
+            return 1
+        fi
+    fi
+
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
@@ -278,15 +288,6 @@ function check_assertions()
     if ! [[ "$debian_version" =~ ^12.*  ]] && ! [[ "$debian_version" =~ "bookworm/sid" ]]; then
         error "YunoHost is only available for the version 12 (Bookworm) of Debian, you are using '$(cat /etc/debian_version)'."
         return 1
-    fi
-    # Forbid people from installing on Ubuntu or Linux mint ...
-    if [[ -f "/etc/lsb-release" ]];
-    then
-        if grep -q -i "Ubuntu\|Mint" /etc/lsb-release
-        then
-            error "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 12 (Bookworm)."
-            return 1
-        fi
     fi
 
     # Assert we're root

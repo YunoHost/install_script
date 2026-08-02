@@ -297,6 +297,13 @@ function check_assertions()
         return 1
     fi
 
+    # Forbid people from installing on Ubuntu or Linux mint ...
+    if [[ -f "/etc/lsb-release" ]]; then
+        if grep -q -i "Ubuntu\|Mint" /etc/lsb-release; then
+            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 13 (Trixie)."
+        fi
+    fi
+
     # Assert we're on Debian
     # Note : we do not rely on lsb_release to avoid installing a dependency
     # only to check this...
@@ -309,13 +316,6 @@ function check_assertions()
     debian_version=$(cat /etc/debian_version)
     if ! [[ "$debian_version" =~ ^13.*  ]]; then
         die "YunoHost is only available for the version 13 (Trixie) of Debian, you are using '$debian_version'."
-    fi
-
-    # Forbid people from installing on Ubuntu or Linux mint ...
-    if [[ -f "/etc/lsb-release" ]]; then
-        if grep -q -i "Ubuntu\|Mint" /etc/lsb-release; then
-            die "Please don't try to install YunoHost on an Ubuntu or Linux Mint system ... You need a 'raw' Debian 13 (Trixie)."
-        fi
     fi
 
     # Assert we're root
