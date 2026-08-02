@@ -306,9 +306,8 @@ function check_assertions()
 
     # Assert we're on Trixie
     # Note : we do not rely on lsb_release to avoid installing a dependency only to check this...
-    # TODO: remove the line with "trixie/sid"
     debian_version=$(cat /etc/debian_version)
-    if ! [[ "$debian_version" =~ ^13.*  ]] && ! [[ "$debian_version" =~ "trixie/sid" ]]; then
+    if ! [[ "$debian_version" =~ ^13.*  ]]; then
         die "YunoHost is only available for the version 13 (Trixie) of Debian, you are using '$debian_version'."
     fi
 
