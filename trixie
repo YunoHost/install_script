@@ -613,7 +613,7 @@ Signed-By: /usr/share/keyrings/yunohost-trixie.gpg
     echo -n "$deb_sources" > /etc/apt/sources.list.d/yunohost.sources
 
     # Add YunoHost repository key to the keyring
-    curl --fail --silent https://repo.yunohost.org/keys/yunohost_trixie.asc | gpg -o /usr/share/keyrings/yunohost-trixie.gpg --dearmor
+    curl --fail --silent https://repo.yunohost.org/keys/yunohost_trixie.asc | gpg -o /usr/share/keyrings/yunohost-trixie.gpg --dearmor --yes
     apt_update
 }
 
