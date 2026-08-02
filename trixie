@@ -235,7 +235,7 @@ function show_apt_progress {
     done_sub_bar="$(printf "%${done}s")"
     todo_sub_bar="$(printf "%${todo}s")"
 
-    echo -ne "$resetline  $bold$blue$title$normal [${done_sub_bar// /=}>${todo_sub_bar}] ${percent:0:4}% ${message:0:40}"
+    echo -ne "$resetline      $bold$blue$title$normal [${done_sub_bar// /=}>${todo_sub_bar}] ${percent:0:4}% ${message:0:40}"
 }
 
 function _apt_with_progress() {
@@ -246,9 +246,9 @@ function _apt_with_progress() {
             percent=$(echo "$line" | cut -d: -f3)
             message=$(echo "$line" | cut -d: -f2)
             if [[ $wat == "dlstatus" ]]; then
-                title="Downloading"
+                title="↓ Downloading"
             else
-                title="Installing"
+                title="↻ Installing"
             fi
             show_apt_progress "$percent" "$title" "$message";
         done
@@ -268,10 +268,10 @@ EOF
     else
         if _apt_with_progress "$@"; then
             ret=0
-            printf "$resetline    $bold${green}Done!$normal"
+            printf "$resetline      $bold${green}✓ Done!$normal"
         else
             ret=1
-            printf "$resetline    $bold${red}'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n";
+            printf "$resetline      $bold${red}✗ 'apt-get $*' failed.$normal Please check $YUNOHOST_LOG for debugging\n\n";
         fi
     fi
     set +o pipefail
@@ -450,9 +450,9 @@ EOF
 
     cat << EOF | tee -a "$YUNOHOST_LOG"
 
-  🚀 ${bold}Let's go !$normal
+     🚀 ${bold}Let's go !$normal
 
-  📜 Detailed logs will be available in $YUNOHOST_LOG
+     📜 Detailed logs will be available in $YUNOHOST_LOG
 EOF
 
     return 0
@@ -583,7 +583,7 @@ function boring_workarounds() {
     chattr -i /etc/resolv.conf 2>/dev/null || true
 
     # Done
-    printf "$resetline    $bold${green}Done!$normal"
+    printf "$resetline      $bold${green}✓ Done!$normal"
     echo
 }
 
@@ -697,7 +697,7 @@ function conclusion() {
     cat << EOF | tee -a "$YUNOHOST_LOG"
 
 
-  🎉 ${bold}YunoHost installation completed!$normal
+     🎉 ${bold}YunoHost installation completed!$normal
 
   ╭───────────────────────────────────────────────────────────────────────────╮
   │ You should now proceed with YunoHost post-installation.                   │
