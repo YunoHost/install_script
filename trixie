@@ -584,7 +584,6 @@ function boring_workarounds() {
 
     # Done
     printf "$resetline      $bold${green}✓ Done!$normal"
-    echo
 }
 
 
