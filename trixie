@@ -304,18 +304,19 @@ function check_assertions()
         fi
     fi
 
+    # Note : we do not rely on lsb_release to avoid installing a dependency just for this...
+    distro_id=$(grep -oP '(?<=^ID=).+' /etc/os-release | tr -d '"')
+    distro_version_id=$(grep -oP '(?<=^VERSION_ID=).+' /etc/os-release | tr -d '"')
+    distro_pretty=$(grep -oP '(?<=^PRETTY_NAME=).+' /etc/os-release | tr -d '"')
+
     # Assert we're on Debian
-    # Note : we do not rely on lsb_release to avoid installing a dependency
-    # only to check this...
-    if [[ ! -f "/etc/debian_version" ]]; then
-        die "This script can only be ran on Debian 13 (Trixie)."
+    if [[ "$distro_id" != "debian" ]]; then
+        die "This script can only be ran on Debian, you are using '$distro_pretty'."
     fi
 
     # Assert we're on Trixie
-    # Note : we do not rely on lsb_release to avoid installing a dependency only to check this...
-    debian_version=$(cat /etc/debian_version)
-    if ! [[ "$debian_version" =~ ^13.*  ]]; then
-        die "YunoHost is only available for the version 13 (Trixie) of Debian, you are using '$debian_version'."
+    if [[ "$distro_version_id" != "13" ]]; then
+        die "YunoHost is only available for the version 13 (Trixie) of Debian, you are using '$distro_pretty'."
     fi
 
     # Assert we're root
